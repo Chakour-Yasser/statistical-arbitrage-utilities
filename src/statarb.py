@@ -40,6 +40,26 @@ TRADING_DAYS = 252
 # --------------------------------------------------------------------------- #
 # Factor model
 # --------------------------------------------------------------------------- #
+def marchenko_pastur_count(eigenvalues: np.ndarray, n_assets: int, n_obs: int,
+                           cap: int = 30) -> int:
+    """Number of eigenvalues that stand above the pure-noise bound.
+
+    For a sample correlation matrix built from n_obs observations of n_assets
+    series, the eigenvalues of a NOISE matrix fill the Marchenko-Pastur support
+    up to (1 + sqrt(N/T))^2. Anything below that is indistinguishable from
+    sampling error.
+
+    This matters here because N/T is about 1.7: the sample correlation matrix is
+    rank-deficient, and only the first handful of eigenvectors carry signal.
+    Measured on this universe, 6 to 9 eigenvalues clear the bound depending on
+    the date -- against the 15 factors originally hedged. Hedging a name against
+    six noise directions removes genuine residual signal and rebalances a random
+    hedge every day, paying turnover for nothing.
+    """
+    bound = (1.0 + np.sqrt(n_assets / n_obs)) ** 2
+    return int(np.clip((eigenvalues > bound).sum(), 1, cap))
+
+
 def eigen_portfolios(returns: np.ndarray, n_factors: int) -> np.ndarray:
     """Risk-adjusted eigenportfolio weights Q (n_assets x n_factors).
 
@@ -168,11 +188,13 @@ def book_weights(pos: np.ndarray, beta: np.ndarray, q: np.ndarray) -> np.ndarray
 # Walk-forward backtest
 # --------------------------------------------------------------------------- #
 def run_statarb(close: pd.DataFrame, dollar_volume: pd.DataFrame,
-                membership: pd.DataFrame, n_factors: int = 15,
+                membership: pd.DataFrame, n_factors: int | str = 15,
                 pca_window: int = 252, reg_window: int = 60, pca_step: int = 5,
                 kappa_min_days: float = 30.0, min_adv: float = 1e7,
                 cost_bps: float = 5.0, s_open: float = 1.25,
                 no_trade_band: float = 0.0, beta_step: int = 1,
+                risk_scale: bool = False, adv_quantile: tuple | None = None,
+                periods_per_year: int = TRADING_DAYS,
                 null_permute: bool = False, seed: int = 0) -> pd.DataFrame:
     """Daily cross-sectional statistical arbitrage backtest.
 
@@ -190,18 +212,48 @@ def run_statarb(close: pd.DataFrame, dollar_volume: pd.DataFrame,
     `beta_step` re-estimates the factor loadings every k days instead of daily,
     for the same reason.
 
-    `null_permute` applies ONE common random time-permutation to every return
-    series. That preserves the cross-sectional factor structure exactly -- the
-    same PCA, the same betas -- while destroying all serial dependence, so it
-    destroys residual mean reversion and nothing else. Any Sharpe the strategy
-    earns under this null is machinery, not signal. Running it BEFORE reporting
-    a positive result is the discipline this project exists to demonstrate.
+    `n_factors="mp"` picks the factor count each day from the Marchenko-Pastur
+    noise bound instead of fixing it at 15. This is a correction, not a tuned
+    parameter: 15 was arbitrary and demonstrably above the noise threshold.
+
+    `risk_scale` sizes each position by the inverse of its residual volatility
+    rather than by equal notional. With equal notional the risk contribution of
+    a name is proportional to its residual vol, so a handful of volatile names
+    dominate the book's variance while contributing no more information than the
+    quiet ones. Equalising risk contributions is the textbook construction.
+
+    `adv_quantile=(lo, hi)` restricts POSITIONS to names whose trailing dollar
+    volume falls in that quantile band of the cross-section, while the factor
+    model keeps using the whole universe. This isolates the liquidity dimension:
+    if the residual reversal premium is compensation for supplying liquidity, it
+    should be larger where liquidity is scarcer -- and so should the cost of
+    harvesting it.
+
+    `null_permute` randomises the SIGN of every return row: at each date, all
+    symbols are multiplied by the same random +1 or -1. This is the null that
+    isolates the effect being traded.
+
+      preserved   the cross-sectional covariance at every date, hence the same
+                  PCA, the same eigenportfolios, the same betas; the volatility
+                  clustering; and -- crucially -- the availability pattern, since
+                  a NaN stays a NaN
+      destroyed   the sign predictability of the cumulative residual, which is
+                  exactly what mean reversion is
+
+    A time-permutation was used first and is wrong on an unbalanced panel: it
+    moves the NaNs as well, so on a universe with staggered listings almost no
+    symbol retains a complete estimation window and the backtest produces nothing.
+    Sign randomisation has no such problem.
+
+    Any Sharpe the strategy earns under this null is machinery, not signal.
+    Running it BEFORE reporting a positive result is the discipline this project
+    exists to demonstrate.
     """
     rets = close.pct_change()
     if null_permute:
         rng = np.random.default_rng(seed)
-        perm = rng.permutation(len(rets))
-        rets = pd.DataFrame(rets.values[perm], index=rets.index, columns=rets.columns)
+        flip = rng.choice([-1.0, 1.0], size=len(rets))[:, None]
+        rets = pd.DataFrame(rets.values * flip, index=rets.index, columns=rets.columns)
 
     dates = close.index
     start = max(pca_window, reg_window) + 1
@@ -225,11 +277,14 @@ def run_statarb(close: pd.DataFrame, dollar_volume: pd.DataFrame,
             continue
         R = win[cols].values
 
-        if q is None or (i - start) % pca_step == 0 or q.shape[0] != len(cols):
-            q, _ = eigen_portfolios(R, n_factors)
-            q_cols = cols
-        if q_cols != cols:                      # universe changed between refits
-            q, _ = eigen_portfolios(R, n_factors)
+        if q is None or (i - start) % pca_step == 0 or q.shape[0] != len(cols) \
+                or q_cols != cols:
+            k = n_factors
+            if n_factors == "mp":
+                z = (R - R.mean(0)) / np.where(R.std(0, ddof=1) > 0, R.std(0, ddof=1), np.nan)
+                ev = np.linalg.eigvalsh(np.nan_to_num(np.corrcoef(z, rowvar=False), nan=0.0))
+                k = marchenko_pastur_count(np.sort(ev)[::-1], len(cols), pca_window)
+            q, _ = eigen_portfolios(R, k)
             q_cols = cols
 
         F = factor_returns(R, q)
@@ -241,15 +296,24 @@ def run_statarb(close: pd.DataFrame, dollar_volume: pd.DataFrame,
         beta, resid = beta_full, resid
         sc = ou_scores(resid)
 
-        hl_days = np.log(2) / sc["kappa"] * TRADING_DAYS
+        hl_days = np.log(2) / sc["kappa"] * periods_per_year
         tradable = np.isfinite(sc["s_score"]) & np.isfinite(hl_days) & (hl_days <= kappa_min_days)
+        if adv_quantile is not None:
+            a = adv.reindex(cols).values
+            lo, hi = np.nanquantile(a, adv_quantile[0]), np.nanquantile(a, adv_quantile[1])
+            tradable &= (a >= lo) & (a <= hi)
 
         prev = pos_state.reindex(cols).fillna(0.0).values
         pos = target_positions(sc["s_score"], prev, tradable, s_open=s_open)
         pos_state = pd.Series(0.0, index=close.columns)
         pos_state.loc[cols] = pos
 
-        w_vec = book_weights(pos, beta[1:].T, q)          # drop the intercept row
+        sized = pos
+        if risk_scale:
+            sd_resid = resid.std(axis=0, ddof=1)
+            inv = np.where(sd_resid > 0, 1.0 / sd_resid, 0.0)
+            sized = pos * inv
+        w_vec = book_weights(sized, beta[1:].T, q)        # drop the intercept row
         w = pd.Series(0.0, index=close.columns)
         w.loc[cols] = w_vec
         if no_trade_band > 0:
@@ -264,6 +328,7 @@ def run_statarb(close: pd.DataFrame, dollar_volume: pd.DataFrame,
         rows.append({"date": dates[i + 1], "gross": gross, "turnover": turn,
                      "net": gross - turn * cost_bps / 1e4,
                      "n_names": len(cols), "n_pos": int((pos != 0).sum()),
+                     "n_factors": q.shape[1],
                      "gross_exposure": float(w.abs().sum())})
         prev_w = w
 

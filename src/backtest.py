@@ -86,15 +86,21 @@ def pair_pnl(pos: pd.Series, ra: pd.Series, rb: pd.Series, beta: float,
                          "turnover": turnover, "pos": pos})
 
 
-def metrics(net: pd.Series, turnover: pd.Series | None = None) -> dict:
+def metrics(net: pd.Series, turnover: pd.Series | None = None,
+            periods_per_year: int = TRADING_DAYS) -> dict:
     """Annualised summary. Sharpe is reported without a risk-free rate, which is
-    standard for a self-financing long/short book."""
+    standard for a self-financing long/short book.
+
+    `periods_per_year` must match the calendar of the underlying: 252 for equity
+    sessions, 365 for crypto perpetuals, which trade continuously. Using 252 on a
+    365-day series would understate the annualised Sharpe by about 20 percent.
+    """
     net = net.dropna()
     if net.empty or net.std() == 0:
         return dict(days=len(net), ann_return=np.nan, ann_vol=np.nan,
                     sharpe=np.nan, max_dd=np.nan, hit_rate=np.nan, turnover=np.nan)
-    ann_ret = net.mean() * TRADING_DAYS
-    ann_vol = net.std(ddof=1) * np.sqrt(TRADING_DAYS)
+    ann_ret = net.mean() * periods_per_year
+    ann_vol = net.std(ddof=1) * np.sqrt(periods_per_year)
     curve = net.cumsum()
     dd = (curve - curve.cummax()).min()
     active = net[net != 0]
@@ -105,5 +111,5 @@ def metrics(net: pd.Series, turnover: pd.Series | None = None) -> dict:
         sharpe=float(ann_ret / ann_vol),
         max_dd=float(dd),
         hit_rate=float((active > 0).mean()) if len(active) else np.nan,
-        turnover=float(turnover.sum() / (len(net) / TRADING_DAYS)) if turnover is not None else np.nan,
+        turnover=float(turnover.sum() / (len(net) / periods_per_year)) if turnover is not None else np.nan,
     )

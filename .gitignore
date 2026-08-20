@@ -20,3 +20,7 @@ scripts/pdf_*.py
 scripts/build_pdf_*.py
 scripts/build_notebook_*.py
 scripts/run_statarb.py
+data/processed/crypto_*.parquet
+scripts/improve*.py
+scripts/crypto_grid.py
+scripts/liquidity_tercile.py
