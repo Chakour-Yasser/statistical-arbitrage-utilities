@@ -71,9 +71,9 @@ Derivation. Regress the change on the level:
 
 Write φ = 1 + b. A shock decays as φᵏ, so the half-life solves φʰ = ½:
 
-    half_life = −ln 2 / ln φ
+    half_life = -ln 2 / ln φ
 
-Link to Ornstein-Uhlenbeck: ds = θ(μ − s)dt + σ dW discretises to φ = e^(−θΔt),
+Link to Ornstein-Uhlenbeck: ds = θ(μ - s)dt + σ dW discretises to φ = e^(-θΔt),
 hence half_life = ln 2 / θ. The same object.
 
 The bias, this is the part that is not in the textbooks' summary. Near a
@@ -105,7 +105,7 @@ decide whether a spread mean-reverts.
 Decision. Rolling window of 60 days, using observations up to **and
 including** t.
 
-Why not full-sample. `z_t = (s_t − mean(s)) / std(s)` over the whole period
+Why not full-sample. `z_t = (s_t - mean(s)) / std(s)` over the whole period
 injects the future into every observation: the strategy would "know" the
 spread's eventual average level, which is precisely what it is supposed to be
 betting on. It is the single most common leak in pairs trading.
@@ -200,7 +200,7 @@ Two consequences:
 1. **Risk.** A selection of 24 pairs with one name in 12 of them is one bet
    expressed twelve ways. Sizing that treats the pairs as independent silently
    concentrates risk. Phase 6 must handle this.
-2. **Statistics.** The N(N−1)/2 tests are far from independent: all names share
+2. **Statistics.** The N(N-1)/2 tests are far from independent: all names share
    the sector factor, and a hub induces strong positive dependence across its own
    pairs. The effective number of independent tests is far below 406. This is
    exactly the regime where the choice between Bonferroni (valid under *any*
