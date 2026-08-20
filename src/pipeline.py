@@ -61,7 +61,7 @@ def run_fold(fold: dict, close: pd.DataFrame, dollar_volume: pd.DataFrame,
             out[f"res_{method}"] = None
             continue
 
-        legs = []
+        legs, brk_legs = [], []
         for _, r in sel.iterrows():
             a, b, beta, al = r["a"], r["b"], r["beta"], r["alpha"]
             la_e, lb_e = log_px[a].reindex(ext), log_px[b].reindex(ext)
@@ -79,12 +79,15 @@ def run_fold(fold: dict, close: pd.DataFrame, dollar_volume: pd.DataFrame,
             pnl = pair_pnl(pos, rets[a].reindex(oos_win), rets[b].reindex(oos_win),
                            beta, cost_bps)
             legs.append(pnl[["gross", "cost", "net", "turnover"]])
+            if broken is not None:
+                brk_legs.append(broken.reindex(oos_win).fillna(False).astype(float))
 
         book = sum(legs) / len(legs)          # equal weight across pairs
+        book["broken_share"] = (sum(brk_legs) / len(brk_legs)) if brk_legs else 0.0
         out[f"res_{method}"] = {
             **metrics(book["net"], book["turnover"]),
             "gross_sharpe": metrics(book["gross"])["sharpe"],
-            "net_curve": book["net"],
+            "book": book,
         }
     return out
 
@@ -107,10 +110,10 @@ def run_walk_forward(close: pd.DataFrame, dollar_volume: pd.DataFrame,
                 row[f"ret_{m}"] = res["ann_return"]
                 row[f"gross_{m}"] = res["gross_sharpe"]
                 row[f"turn_{m}"] = res["turnover"]
-                curves.setdefault(m, []).append(res["net_curve"])
+                curves.setdefault(m, []).append(res["book"])
             else:
                 row[f"sharpe_{m}"] = np.nan
                 row[f"ret_{m}"] = np.nan
         rows.append(row)
-    stitched = {m: pd.concat(v).sort_index() for m, v in curves.items()}
+    stitched = {m: pd.concat(v).sort_index() for m, v in curves.items()}  # DataFrames
     return pd.DataFrame(rows), stitched

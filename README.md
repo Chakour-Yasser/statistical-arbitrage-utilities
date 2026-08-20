@@ -19,12 +19,12 @@ Trois axes :
 |---|---|---|
 | 0 | Setup, seed, structure | fait |
 | 1 | Données & univers point-in-time | **fait** |
-| 2 | Fondations cointégration (EG, ADF, demi-vie, z-score) | **fait — en anglais uniquement** |
+| 2 | Fondations cointégration | **fait — anglais** |
+| 3 | V2 — sélection sous tests multiples | **fait — anglais** |
+| 4 | V1 — conscience du régime | **fait — anglais** |
+| 5 | V3 — paniers Johansen | **fait — anglais** |
+| 6-8 | Backtest, analyse, rédaction | **fait — anglais** |
 | 3 | V2 — sélection sous tests multiples | à venir |
-| 4 | V1 — conscience du régime | à venir |
-| 6 | Moteur de backtest (coûts, exécution t+1) | à venir |
-| 7 | Évaluation & attribution | à venir |
-| 8 | Rédaction & défense | à venir |
 
 ## Phase 1 — ce qui est établi
 

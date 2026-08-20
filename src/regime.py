@@ -73,7 +73,7 @@ def days_since_mean_cross(z: pd.Series, band: float = 0.5) -> pd.Series:
 
 
 def regime_flags(la: pd.Series, lb: pd.Series, z: pd.Series, beta_is: float,
-                 window: int = 250, p_max: float = 0.10,
+                 window: int = 500, p_max: float = 0.50,
                  beta_drift_max: float = 0.50, hl_max: float = 60.0,
                  stale_max: int = 120) -> pd.DataFrame:
     """Four causal break signals, plus their disjunction.
@@ -92,6 +92,40 @@ def regime_flags(la: pd.Series, lb: pd.Series, z: pd.Series, beta_is: float,
     The disjunction is deliberate. These are different failure modes, not four
     measurements of one thing, and the cost of exiting a healthy pair is a missed
     trade while the cost of holding a broken one is unbounded.
+
+    ON THE DEFAULTS -- window 500 rather than 250
+    ---------------------------------------------
+    A 250-day trailing Engle-Granger test has almost no power (Phase 2, Section
+    5.1), so p > 0.10 is the NORMAL state even for a pair that passed a 750-day
+    test. With window=250 and p_max=0.10 the p_break flag fired on 68 percent of
+    days and the disjunction on 95 percent: the detector was not detecting, it
+    was simply keeping the book flat. Doubling the window and only flagging when
+    the evidence has genuinely gone (p > 0.5) brings the firing rate to roughly
+    40 percent.
+
+    MEASURED RESULT: ON THIS UNIVERSE THESE FLAGS DO NOT DISCRIMINATE
+    -----------------------------------------------------------------
+    The test that matters is not the firing rate but whether flagged days are
+    actually worse. Mean daily P&L on flagged days minus mean on unflagged days,
+    over four folds, with the flags used as a label and NOT as an exit:
+
+        window  p_max   flag active   P&L(flagged) - P&L(clean), bp/day
+           250   0.10        86.5 %                        +0.48
+           500   0.30        46.7 %                        +2.60
+           500   0.50        39.0 %                        +2.17
+           750   0.50        20.2 %                        +3.03
+
+    The differential is POSITIVE at every setting: flagged days are marginally
+    BETTER, not worse. The detector has no predictive value here, and the
+    drawdown reduction it produces is purely a leverage effect -- a book that is
+    flat most of the time has less of everything, including loss.
+
+    The likely reason is structural rather than a tuning failure. Regime
+    detection can only protect a regime in which the strategy works, and the
+    gross Sharpe of this book is approximately zero throughout (Phase 7). There
+    is no good state to preserve. The mechanism is kept, correctly implemented
+    and causal, as a negative result: it is the honest answer to "does your
+    break detector actually work", and the answer is no.
     """
     spread = la - beta_is * lb
     p = rolling_coint_pvalue(la, lb, window)
