@@ -179,13 +179,14 @@ def snapshot_dates(start: str = C.START, end: str = C.END,
     return pd.date_range(start=start, end=end, freq=f"{months}MS")
 
 
-def build_membership(sector: str = C.SECTOR, force: bool = False) -> pd.DataFrame:
+def build_membership(sector: str | None = C.SECTOR, force: bool = False) -> pd.DataFrame:
     """Boolean matrix (snapshot dates x tickers): True = member of the sector.
 
     Also writes a detailed snapshot log to data/processed/.
     """
-    out_path = C.DATA_PROC / f"membership_{sector.lower()}.parquet"
-    meta_path = C.DATA_PROC / f"membership_{sector.lower()}_meta.json"
+    tag = (sector or "all").lower()
+    out_path = C.DATA_PROC / f"membership_{tag}.parquet"
+    meta_path = C.DATA_PROC / f"membership_{tag}_meta.json"
     if out_path.exists() and not force:
         return pd.read_parquet(out_path)
 
@@ -195,7 +196,10 @@ def build_membership(sector: str = C.SECTOR, force: bool = False) -> pd.DataFram
         rev = revision_at(ts)
         html = _revision_html(rev["revid"])
         cons = parse_constituents(html)
-        sel = cons[cons["sector"].str.casefold() == sector.casefold()]
+        # sector=None keeps the whole index: cross-sectional statistical
+        # arbitrage needs breadth, not a single-factor sector.
+        sel = cons if sector is None else cons[
+            cons["sector"].str.casefold() == sector.casefold()]
         rows[d] = {tk: True for tk in sel["ticker"]}
         meta.append({
             "snapshot": d.strftime("%Y-%m-%d"),
