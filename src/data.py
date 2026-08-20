@@ -1,7 +1,7 @@
 """
 Price download and cleaning.
 
-Documented choices (see docs/01_universe_decision.en.md):
+Documented choices (see docs/01_universe_decision.md):
   - TOTAL-RETURN prices (auto_adjust=True): utilities pay 3-4 %/yr in dividends,
     widely dispersed across names. On raw prices the yield difference injects a
     quasi-deterministic drift into the spread and destroys the residual's

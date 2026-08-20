@@ -10,7 +10,7 @@ constituents, and read the page *as it existed* on each selection date. This
 gives us membership AND the point-in-time GICS sector by direct observation --
 including for companies that have since disappeared.
 
-Accepted limitations (documented in docs/01_universe_decision.en.md):
+Accepted limitations (documented in docs/01_universe_decision.md):
   - Wikipedia is edited with a lag of a few days after an index change. No
     consequence here: re-selection is annual.
   - *Prices* for delisted companies remain unavailable for free. The residual
@@ -297,7 +297,7 @@ def tradable_universe(memb: pd.DataFrame, close: pd.DataFrame) -> pd.DataFrame:
     """Membership matrix with invalid-identity tickers removed.
 
     Removed names are NOT forgotten: they constitute the residual survivorship
-    bias, quantified in reports/survivorship.en.md.
+    bias, quantified in reports/survivorship.md.
     """
     val = validate_identity(memb, close)
     bad = val.index[val["status"].isin(["RECYCLED", "NO_DATA", "SUSPECT"])]

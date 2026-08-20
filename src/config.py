@@ -1,4 +1,4 @@
-"""Global project constants. Frozen in Phase 1 (see docs/01_universe_decision.en.md)."""
+"""Global project constants. Frozen in Phase 1 (see docs/01_universe_decision.md)."""
 from pathlib import Path
 
 SEED = 20260819

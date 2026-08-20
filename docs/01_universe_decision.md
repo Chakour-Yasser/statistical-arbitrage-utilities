@@ -1,106 +1,93 @@
-# Phase 1 — Décision d'univers (FIGÉE le 2026-08-19, avant tout backtest)
+# Phase 1 — Universe decision (FROZEN 2026-08-19, before any backtest)
 
-> Ce document est écrit **avant** la première ligne de code de backtest et n'est pas
-> révisable à la lumière des résultats. Toute révision ultérieure serait du data
-> snooping au niveau de l'univers et devrait être signalée comme telle.
+> This document is written **before** the first line of backtest code and is not revisable in
+> light of results. Any later revision would be sector-level data snooping and must be flagged
+> as such. French version: `docs/01_universe_decision.md`.
 
-## 1. Univers : Utilities du S&P 500 (GICS 55)
+## 1. Universe: S&P 500 Utilities (GICS 55)
 
-**Décision.** Actions du secteur GICS *Utilities* ayant appartenu au S&P 500 à un
-moment quelconque entre 2014-01-01 et 2026-06-30. Environ 31 noms courants, ~35-40
-noms en union sur la période.
+**Decision.** Stocks in the GICS *Utilities* sector that belonged to the S&P 500 at any point
+between 2014-01-01 and 2026-06-30. Roughly 31 current names, ~35-40 names in union over the
+period.
 
-**Pourquoi intra-secteur.** La cointégration n'est pas une régularité statistique
-gratuite : elle exige que deux prix partagent la *même* tendance stochastique, de
-sorte qu'une combinaison linéaire soit I(0). Un prior économique est donc nécessaire.
-Intra-secteur il est identifiable : même exposition aux taux longs, même régime
-réglementaire (rendement autorisé sur base d'actifs), mêmes coûts d'input.
-Bénéfice secondaire, non négligeable : cela réduit le nombre de tests de
-N(N-1)/2 sur ~500 noms (124 750) à ~465, donc allège massivement la charge de
-correction pour tests multiples (Phase 3).
+**Why intra-sector.** Cointegration is not a free statistical regularity: it requires two prices
+to share the *same* stochastic trend, so that a linear combination is I(0). An economic prior is
+therefore necessary. Within a sector it is identifiable: the same exposure to long rates, the same
+regulatory regime (allowed return on an asset base), the same input costs. A secondary and
+non-negligible benefit: it reduces the number of tests from N(N-1)/2 over ~500 names (124,750) to
+~465, hugely lightening the multiple-testing correction load (Phase 3).
 
-**Pourquoi les utilities spécifiquement.**
-- Facteur commun le plus net de tout le marché actions US (duration + réglementation)
-  → proportion attendue de vraies paires cointégrées non nulle, ce qui rend
-  l'expérience « sélection naïve vs corrigée » informative plutôt que dégénérée.
-- N = 31 → 465 paires → sous H0 à α = 5 %, **~23 découvertes fallacieuses attendues**.
-  Chiffre concret, opposable au nombre de paires effectivement « significatives ».
-- Trois ruptures de régime datables **et explicables économiquement** :
-  1. COVID (mars 2020) — choc de liquidité, corrélations → 1.
-  2. Choc de taux (2022) — dispersion des sensibilités de duration.
-  3. Repricing IA / datacenters (2023-2024) — les producteurs *merchant*
-     (VST, CEG, NRG) décrochent structurellement des régulés (ED, WEC, ...).
-     C'est LA rupture de cointégration à raconter en entretien.
+**Why utilities specifically.**
+- The clearest common factor in the entire US equity market (duration + regulation) → a non-zero
+  expected fraction of genuinely cointegrated pairs, which makes the "naive vs corrected
+  selection" experiment informative rather than degenerate.
+- N = 31 → 465 pairs → under H0 at α = 5 %, **~23 spurious discoveries expected**. A concrete
+  number, comparable against the count of pairs actually found significant.
+- Three breaks that are datable **and economically explainable**:
+  1. COVID (March 2020) — liquidity shock, correlations → 1.
+  2. Rate shock (2022) — dispersion of duration sensitivities.
+  3. AI / data-centre repricing (2023-2024) — *merchant* generators (VST, CEG, NRG) structurally
+     decouple from regulated names (ED, WEC, ...). This is THE cointegration break to tell in an
+     interview.
 
-**Objection anticipée.** « Ton spread n'est qu'un pari de duration déguisé. »
-Réponse : partiellement vrai par construction, et c'est mesurable — le ratio de
-couverture absorbe l'exposition commune aux taux ; le résidu ne doit plus être
-expliqué par les taux. À vérifier explicitement (Phase 7 : régression du P&L sur
-les variations de taux 10 ans).
+**Anticipated objection.** "Your spread is just a disguised duration bet."
+Answer: partly true by construction, and measurable — the hedge ratio absorbs the common rate
+exposure; the residual must no longer be explained by rates. To be checked explicitly (Phase 7:
+regress P&L on 10-year yield changes).
 
-**Alternatives écartées et pourquoi.**
-| Alternative | Raison de l'écarter |
+**Alternatives ruled out, and why.**
+| Alternative | Reason for rejection |
 |---|---|
-| Banques régionales (KRE) | Multiple testing plus riche (~4 000 paires) et survivorship spectaculaire (SVB/SBNY/FRC à zéro), mais les prix des délistés sont introuvables gratuitement → la plomberie de données aurait mangé le budget méthodologique. |
-| Énergie E&P (XOP) | Vague de M&A 2023-24 qui tronque de nombreuses séries ; hétérogénéité de levier → cointégration fragile. |
-| Semi-conducteurs | Trop tendanciel ; risque réel de ne trouver aucune paire cointégrée, ce qui viderait V2 de son contenu. |
+| Regional banks (KRE) | Richer multiple testing (~4,000 pairs) and spectacular survivorship (SVB/SBNY/FRC to zero), but delisted prices are not obtainable for free → data plumbing would have eaten the methodology budget. |
+| Energy E&P (XOP) | The 2023-24 M&A wave truncates many series; heterogeneous leverage makes cointegration fragile. |
+| Semiconductors | Too trending; a real risk of finding no cointegrated pair at all, which would empty V2 of content. |
 
-## 2. Période : 2014-01-01 → 2026-06-30
+## 2. Period: 2014-01-01 → 2026-06-30
 
-~12,5 ans. Découpage walk-forward visé : **3 ans in-sample (sélection) / 1 an
-out-of-sample (trading)**, fenêtre glissante d'un an → **~9 folds**.
+~12.5 years. Intended walk-forward split: **3 years in-sample (selection) / 1 year out-of-sample
+(trading)**, rolling forward one year → **~9 folds**.
 
-Compromis assumé : remonter avant 2014 aurait ajouté des folds mais aggravé le
-survivorship bias et fait porter le test sur une structure sectorielle
-(pré-boom renouvelables, pré-spin-off CEG) peu comparable à l'actuelle.
+Accepted trade-off: going back before 2014 would have added folds but worsened survivorship bias
+and tested against a sector structure (pre-renewables boom, pre-CEG spin-off) barely comparable to
+today's.
 
-## 3. Prix : total-return (ajustés splits + dividendes)
+## 3. Prices: total-return (adjusted for splits + dividends)
 
-**Décision.** `auto_adjust=True` (yfinance), c'est-à-dire des prix ajustés des
-splits *et* des dividendes.
+**Decision.** `auto_adjust=True` (yfinance), i.e. prices adjusted for splits *and* dividends.
 
-**Pourquoi c'est une décision et pas un détail.** Le rendement du dividende des
-utilities est de 3-4 % par an et **très dispersé** entre les noms. Sur prix bruts,
-la différence de rendement entre deux titres injecte une dérive quasi-déterministe
-dans le spread : le résidu n'est plus stationnaire et on rejetterait des paires
-authentiquement cointégrées. Sur prix total-return, cette dérive disparaît. C'est
-aussi le bon objet économique : la P&L d'une position long/short encaisse les
-dividendes.
+**Why this is a decision and not a detail.** Utilities' dividend yield is 3-4 % per year and
+**widely dispersed** across names. On raw prices, the yield difference between two stocks injects
+a quasi-deterministic drift into the spread: the residual is no longer stationary and genuinely
+cointegrated pairs would be rejected. On total-return prices that drift disappears. It is also the
+right economic object: a long/short position's P&L collects dividends.
 
-**Fuite résiduelle assumée.** Les prix ajustés sont *rétro*-ajustés par les
-dividendes futurs : la série de 2018 telle que téléchargée en 2026 n'est pas celle
-qu'un trader observait en 2018. L'effet est d'ordre 2 sur un spread long/short
-(les deux jambes sont ajustées dans le même sens) mais il existe et il est nommé ici.
+**Accepted residual leak.** Adjusted prices are *retro*-adjusted by future dividends: the 2018
+series as downloaded in 2026 is not the one a trader observed in 2018. The effect is second-order
+on a long/short spread (both legs adjusted in the same direction) but it exists and is named here.
 
 ## 4. Survivorship bias
 
-**Correctif appliqué.** Appartenance au S&P 500 reconstruite *point-in-time* à
-partir de la table historique des ajouts/retraits. À chaque date de sélection, le
-screener ne voit que les noms membres de l'indice **à cette date**. Cela élimine la
-composante « choix des candidats » du biais.
+**Correction applied.** S&P 500 membership reconstructed *point-in-time* from the page's revision
+history. At each selection date the screener sees only names that were members **on that date**.
+This eliminates the "candidate selection" component of the bias.
 
-**Biais résiduel, non corrigé, et sa direction.** Les prix des sociétés délistées
-(faillite, rachat) ne sont pas disponibles gratuitement. Les noms qui disparaissent
-sont majoritairement des noms en difficulté ou rachetés — c'est-à-dire précisément
-des cas où une relation de cointégration casse violemment (rachat = découplage
-instantané du prix vers le prix d'offre). Les exclure **surestime** la performance
-de la stratégie. Magnitude à quantifier en Phase 7 : nombre de sorties d'indice
-dans le secteur sur la période, rapporté au nombre de paires actives.
+**Residual bias, uncorrected, and its direction.** Prices for delisted companies (bankruptcy,
+acquisition) are not available for free. Names that disappear are predominantly distressed or
+acquired — precisely the cases where a cointegration relation breaks violently (a takeover means
+the price instantly decouples toward the offer price). Excluding them **overstates** the
+strategy's performance. Magnitude quantified in `reports/survivorship.md`.
 
-**Limite de la reconstruction.** Le secteur GICS listé sur la source publique est
-le secteur *courant* ; pour les noms sortis de l'indice avant aujourd'hui, le
-secteur est réattribué manuellement (liste courte, vérifiable, versionnée dans
-`src/universe.py`).
+**Limit of the reconstruction.** The GICS sector listed on the public source is the *current*
+sector; for names that left the index before today, the sector is reassigned manually (a short,
+verifiable list versioned in `src/universe.py`).
 
-## 5. Filtre de liquidité — causal par construction
+## 5. Liquidity filter — causal by construction
 
-Seuil de dollar-volume médian appliqué **fold par fold, sur la fenêtre in-sample
-uniquement**. Calculer ce filtre sur l'échantillon complet serait une fuite : on
-sélectionnerait les titres qui *resteront* liquides, ce qui est une information
-future, corrélée à la survie et donc à la performance.
+A median dollar-volume threshold applied **fold by fold, on the in-sample window only**. Computing
+this filter on the full sample would be a leak: it would select the names that *will remain*
+liquid, which is future information correlated with survival and therefore with performance.
 
-## 6. Marché unique, devise unique
+## 6. Single market, single currency
 
-Tous les titres cotent aux US, même clôture, même devise. On évite le piège des
-paires trans-marchés où l'asynchronicité des heures de clôture fabrique une
-prédictibilité illusoire du spread.
+All names trade in the US, same close, same currency. This avoids the cross-market pairs trap
+where asynchronous closing times manufacture illusory spread predictability.
