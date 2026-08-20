@@ -114,7 +114,8 @@ def fetch_klines(symbol: str, start: str, end: str, interval: str = "1d") -> pd.
     df = pd.DataFrame(out, columns=[
         "open_time", "open", "high", "low", "close", "volume", "close_time",
         "quote_volume", "trades", "taker_base", "taker_quote", "ignore"])
-    df["date"] = pd.to_datetime(df["open_time"], unit="ms").dt.normalize()
+    ts = pd.to_datetime(df["open_time"], unit="ms")
+    df["date"] = ts.dt.normalize() if interval == "1d" else ts
     return df.set_index("date")[["close", "quote_volume"]].astype(float)
 
 

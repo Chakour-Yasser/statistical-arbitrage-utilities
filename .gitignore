@@ -24,3 +24,5 @@ data/processed/crypto_*.parquet
 scripts/improve*.py
 scripts/crypto_grid.py
 scripts/liquidity_tercile.py
+scripts/opt_compare*.py
+scripts/smax_test.py
