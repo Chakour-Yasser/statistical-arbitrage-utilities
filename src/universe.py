@@ -47,7 +47,7 @@ def _get(params: dict, tries: int = 8) -> dict:
     """GET with exponential backoff: the Wikipedia API returns 429s in bursts.
 
     A backtest whose universe construction silently fails on a missing snapshot
-    would produce a truncated universe -- so we fail loudly instead.
+    would produce a truncated universe, so we fail loudly instead.
     """
     delay = 5.0
     for k in range(tries):
@@ -66,10 +66,10 @@ def _get(params: dict, tries: int = 8) -> dict:
 
 
 def revision_at(timestamp: str) -> dict:
-    """Last revision of the page published BEFORE `timestamp` (ISO 8601, UTC).
+    """Last revision of the page published before `timestamp` (Iso 8601, UTC).
 
     `rvdir=older` + `rvstart=ts`: walk back in time from ts. This is the crucial
-    no-leak property -- we must never read a revision later than the selection
+    no-leak property, we must never read a revision later than the selection
     date.
     """
     # persistent cache of revision lookups -> reruns are incremental
@@ -163,8 +163,7 @@ def normalize_ticker(t: str) -> str:
     """Wikipedia writes 'BRK.B', Yahoo Finance expects 'BRK-B'.
 
     A failed conversion silently drops a name from the universe *without raising
-    an error* -- exactly the kind of invisible bug a backtest never reports.
-    Hence a centralised, unit-tested normalisation.
+    an error*, the kind of bug a backtest does not report, so the conversion is centralised and unit-tested.
     """
     t = str(t).strip().upper()
     t = t.split("[")[0].strip()      # wiki footnote markers
@@ -174,12 +173,12 @@ def normalize_ticker(t: str) -> str:
 # --------------------------------------------------------------------------- #
 # Building the membership matrix
 # --------------------------------------------------------------------------- #
-def snapshot_dates(start: str = C.START, end: str = C.END,
+def snapshot_dates(start: str = C.Start, end: str = C.End,
                    months: int = C.SNAPSHOT_FREQ_MONTHS) -> pd.DatetimeIndex:
     return pd.date_range(start=start, end=end, freq=f"{months}MS")
 
 
-def build_membership(sector: str | None = C.SECTOR, force: bool = False) -> pd.DataFrame:
+def build_membership(sector: str | None = C.Sector, force: bool = False) -> pd.DataFrame:
     """Boolean matrix (snapshot dates x tickers): True = member of the sector.
 
     Also writes a detailed snapshot log to data/processed/.
@@ -228,7 +227,7 @@ if __name__ == "__main__":
 
 
 # --------------------------------------------------------------------------- #
-# Identity check: detecting TICKER RECYCLING
+# Identity check: detecting Ticker Recycling
 # --------------------------------------------------------------------------- #
 def membership_windows(memb: pd.DataFrame) -> pd.DataFrame:
     """For each ticker: first and last snapshot where it is a sector member."""
@@ -247,12 +246,12 @@ def validate_identity(memb: pd.DataFrame, close: pd.DataFrame,
                       min_overlap_frac: float = 0.50) -> pd.DataFrame:
     """Check that the price history overlaps the membership window.
 
-    WHY this is a blocking check and not a warning
+    Why this is a blocking check and not a warning
     ----------------------------------------------
     Tickers get recycled. 'NU' denoted Northeast Utilities until 2015; since
     December 2021 it denotes Nu Holdings, a Brazilian neobank. A naive
     per-ticker download therefore injects an unrelated company's prices into the
-    sector universe -- silently, without raising an exception. The backtest then
+    sector universe, silently, without raising an exception. The backtest then
     produces a perfectly plausible and perfectly false P&L.
 
     Test: the quotation period must cover at least `min_overlap_frac` of the
@@ -270,7 +269,7 @@ def validate_identity(memb: pd.DataFrame, close: pd.DataFrame,
         px_first, px_last = obs[0], obs[-1]
         # Membership window widened by one snapshot on the right: being a member
         # at date t means being one at least until t+6 months. Without this, a
-        # name present in a single snapshot (e.g. OKE, reclassified from
+        # name present in a single snapshot (e.g. Oke, reclassified from
         # Utilities to Energy in early 2014) would have a zero-length window and
         # be wrongly declared recycled.
         lo = w["memb_first"]
@@ -281,8 +280,8 @@ def validate_identity(memb: pd.DataFrame, close: pd.DataFrame,
         if frac < 0.05:
             # Near-zero overlap: the ticker denotes a different company. The
             # threshold is not exactly 0 because a ticker recycled shortly after
-            # the acquisition (TEG/Integrys) overlaps the window by a few days.
-            status = "RECYCLED"
+            # the acquisition (Teg/Integrys) overlaps the window by a few days.
+            status = "recycled"
         elif frac < min_overlap_frac:
             status = "SUSPECT"           # truncated history: manual review
         else:
@@ -296,10 +295,10 @@ def validate_identity(memb: pd.DataFrame, close: pd.DataFrame,
 def tradable_universe(memb: pd.DataFrame, close: pd.DataFrame) -> pd.DataFrame:
     """Membership matrix with invalid-identity tickers removed.
 
-    Removed names are NOT forgotten: they constitute the residual survivorship
+    Removed names are not forgotten: they constitute the residual survivorship
     bias, quantified in reports/survivorship.md.
     """
     val = validate_identity(memb, close)
-    bad = val.index[val["status"].isin(["RECYCLED", "NO_DATA", "SUSPECT"])]
+    bad = val.index[val["status"].isin(["recycled", "NO_DATA", "SUSPECT"])]
     keep = [c for c in memb.columns if c not in bad]
     return memb[keep]

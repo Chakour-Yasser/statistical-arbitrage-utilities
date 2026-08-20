@@ -2,14 +2,14 @@
 Price download and cleaning.
 
 Documented choices (see docs/01_universe_decision.md):
-  - TOTAL-RETURN prices (auto_adjust=True): utilities pay 3-4 %/yr in dividends,
+  - Total-Return prices (auto_adjust=True): utilities pay 3-4 %/yr in dividends,
     widely dispersed across names. On raw prices the yield difference injects a
     quasi-deterministic drift into the spread and destroys the residual's
     stationarity -> genuinely cointegrated pairs would be rejected.
   - NO forward-fill. The usual justification ("filling manufactures mean
-    reversion") is FALSE: verified by simulation (see notebook, section 5),
+    reversion") is False: verified by simulation (see notebook, section 5),
     ffill biases neither the estimated half-life (+0.2 %) nor the number of
-    signals. The real defect is TRADABILITY: on an OU spread with 5 % missing
+    signals. The real defect is Tradability: on an OU spread with 5 % missing
     days, ~3.8 % of |z|>2 signals land on a day the name did not trade. The
     backtest would open positions at a price that never existed. NaNs are
     therefore kept and handled explicitly, pair by pair.
@@ -22,7 +22,7 @@ import yfinance as yf
 from . import config as C
 
 
-def download_prices(tickers: list[str], start: str = C.START, end: str = C.END,
+def download_prices(tickers: list[str], start: str = C.Start, end: str = C.End,
                     force: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Returns (adjusted_close, dollar_volume), indexed by date, columns = tickers."""
     px_path = C.DATA_PROC / "prices_adj.parquet"
@@ -47,13 +47,13 @@ def download_prices(tickers: list[str], start: str = C.START, end: str = C.END,
 
 def _clean(close: pd.DataFrame, dollar_vol: pd.DataFrame,
            min_coverage: float = 0.80) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Minimal, NON-destructive cleaning.
+    """Minimal, Non-destructive cleaning.
 
     - drops entirely empty columns (tickers the vendor no longer serves,
       typically delisted companies -> this is the residual survivorship bias,
       quantified rather than hidden);
     - drops dates where fewer than `min_coverage` of tickers trade: these are
-      partial holidays or data glitches, not sessions. We do NOT drop a date
+      partial holidays or data glitches, not sessions. We do not drop a date
       because a single name is missing: a newly listed name legitimately has a
       shorter history.
     """

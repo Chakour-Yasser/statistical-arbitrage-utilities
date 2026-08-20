@@ -11,21 +11,21 @@ in minutes rather than days.
 Crypto perpetuals are where that constraint still binds long enough to be
 harvested at a daily horizon: the flow is leveraged and largely non-institutional,
 liquidation cascades take hours to clear, and realised volatility is 5-10x that
-of equities -- which is the parameter that matters, since the equity book died at
+of equities, which is the parameter that matters, since the equity book died at
 a 3.74 bp breakeven cost.
 
-Survivorship, and why it is BETTER handled here than in equities
+Survivorship, and why it is better handled here than in equities
 ----------------------------------------------------------------
-Two pieces of luck compared with the equity universe:
+Two things work in our favour compared with the equity universe:
 
   exact listing dates   `onboardDate` gives the precise moment a contract began
                         trading, so point-in-time entry is exact rather than
                         reconstructed from a proxy with a two-day median lag.
   delisted contracts    `exchangeInfo` reports SETTLING symbols alongside
                         TRADING ones, recovering 126 contracts that have been or
-                        are being delisted -- including FTT, the FTX token.
+                        are being delisted, including FTT, the FTX token.
 
-What remains uncorrected: contracts purged from the API entirely (BTCST, for
+What remains uncorrected: contracts purged from the API entirely (Btcst, for
 instance, returns "invalid symbol"). Those are lost, and as in equities the
 survivors are the healthier names, so the residual bias again runs in the
 favourable direction.
@@ -93,7 +93,7 @@ def perpetual_universe() -> pd.DataFrame:
 
 
 def fetch_klines(symbol: str, start: str, end: str, interval: str = "1d") -> pd.DataFrame | None:
-    """Daily OHLCV plus quote volume, paged. Returns None if the symbol is purged."""
+    """Daily Ohlcv plus quote volume, paged. Returns None if the symbol is purged."""
     t0 = int(pd.Timestamp(start).timestamp() * 1000)
     t1 = int(pd.Timestamp(end).timestamp() * 1000)
     out = []
@@ -122,7 +122,7 @@ def fetch_klines(symbol: str, start: str, end: str, interval: str = "1d") -> pd.
 def build_membership(universe: pd.DataFrame, index: pd.DatetimeIndex) -> pd.DataFrame:
     """Point-in-time tradability: True from the listing date to the delivery date.
 
-    This is EXACT, not reconstructed. A contract cannot be selected before it
+    This is Exact, not reconstructed. A contract cannot be selected before it
     existed, which is the entry-side look-ahead that the equity universe could
     only approximate to within a couple of days.
     """

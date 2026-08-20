@@ -1,5 +1,5 @@
 """
-Phase 7 -- evaluation and attribution.
+Phase 7, evaluation and attribution.
 
 A single aggregate Sharpe ratio hides everything worth knowing. This module
 decomposes: what costs take, when the edge decays, where the drawdown comes
@@ -17,9 +17,9 @@ def cost_sensitivity(gross: pd.Series, turnover: pd.Series,
                      bps_grid=(0, 1, 2, 5, 10, 20)) -> pd.DataFrame:
     """Sharpe as a function of the per-trade cost assumption.
 
-    The breakeven cost -- the level at which the net Sharpe crosses zero -- is a
+    The breakeven cost, the level at which the net Sharpe crosses zero, is a
     more honest headline than any single Sharpe, because it states how much
-    execution quality the strategy REQUIRES rather than assuming one number.
+    execution quality the strategy Requires rather than assuming one number.
     """
     rows = []
     for bps in bps_grid:
@@ -32,7 +32,7 @@ def cost_sensitivity(gross: pd.Series, turnover: pd.Series,
 
 def subperiod_metrics(net: pd.Series, freq: str = "YE") -> pd.DataFrame:
     """Per-period metrics. A strategy whose edge decays shows it here and nowhere
-    else -- the aggregate number averages the good years with the dead ones."""
+    else, the aggregate number averages the good years with the dead ones."""
     rows = []
     for period, chunk in net.groupby(pd.Grouper(freq=freq)):
         if len(chunk) < 20:
@@ -67,9 +67,9 @@ def rate_exposure(net: pd.Series, yield_series: pd.Series) -> dict:
     """Regress daily P&L on changes in the 10-year yield.
 
     This answers the standing objection to a utilities pairs book: "your spread
-    is just a disguised duration bet". The hedge ratio removes the COMMON rate
-    exposure by construction; what must be checked is that the residual -- the
-    P&L itself -- is no longer explained by rates. A significant coefficient
+    is just a disguised duration bet". The hedge ratio removes the Common rate
+    exposure by construction; what must be checked is that the residual, the
+    P&L itself, is no longer explained by rates. A significant coefficient
     would mean the strategy is a rates position wearing a market-neutral label.
     """
     d_y = yield_series.reindex(net.index).ffill().diff()

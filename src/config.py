@@ -1,19 +1,19 @@
 """Global project constants. Frozen in Phase 1 (see docs/01_universe_decision.md)."""
 from pathlib import Path
 
-SEED = 20260819
+Seed = 20260819
 
-ROOT = Path(__file__).resolve().parents[1]
-DATA_RAW = ROOT / "data" / "raw"
-DATA_PROC = ROOT / "data" / "processed"
-REPORTS = ROOT / "reports"
-for _p in (DATA_RAW, DATA_PROC, REPORTS):
+Root = Path(__file__).resolve().parents[1]
+DATA_RAW = Root / "data" / "raw"
+DATA_PROC = Root / "data" / "processed"
+Reports = Root / "reports"
+for _p in (DATA_RAW, DATA_PROC, Reports):
     _p.mkdir(parents=True, exist_ok=True)
 
 # --- Universe (frozen) ---
-SECTOR = "Utilities"          # GICS level-1 label
-START = "2014-01-01"
-END = "2026-06-30"
+Sector = "Utilities"          # GICS level-1 label
+Start = "2014-01-01"
+End = "2026-06-30"
 
 # Cadence of point-in-time index snapshots. Semi-annual: twice as fine as the
 # annual walk-forward re-selection, hence never more than 6 months stale.

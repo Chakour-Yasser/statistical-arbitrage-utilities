@@ -25,7 +25,7 @@ for i in range(253, len(dates)-1, 3):          # every 3rd day is plenty for a s
     X = win[cols].values
     if q is None or q_cols!=cols: q,_ = eigen_portfolios(X,15); q_cols=cols
     F = factor_returns(X,q); beta,res = residual_betas(X[-60:],F[-60:]); sc = ou_scores(res)
-    # rendement RESIDUEL de la periode suivante, couvert des memes facteurs
+    # rendement Residuel de la periode suivante, couvert des memes facteurs
     r_next = rets.iloc[i+1][cols].values
     f_next = r_next @ q
     resid_next = r_next - (beta[0] + f_next @ beta[1:])

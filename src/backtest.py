@@ -1,5 +1,5 @@
 """
-Phase 6 (minimal) -- backtest engine, needed to evaluate Phases 3 and 4.
+Phase 6 (minimal), backtest engine, needed to evaluate Phases 3 and 4.
 
 Two rules make or break the honesty of the result:
 
@@ -45,7 +45,7 @@ def pair_positions(z: pd.Series, entry: float = 2.0, exit_: float = 0.5,
             if abs(zi) >= stop:
                 # Stopped out. Without the block below the position would
                 # immediately re-open on the next bar, since |z| is still beyond
-                # the entry threshold -- the strategy would fight the move all
+                # the entry threshold, the strategy would fight the move all
                 # the way out, churning at the worst possible moment.
                 cur, blocked = 0.0, True
             elif abs(zi) <= exit_:

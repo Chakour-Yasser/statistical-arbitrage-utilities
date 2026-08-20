@@ -1,5 +1,5 @@
 """
-Phase 3 -- honest selection under multiple testing.
+Phase 3, honest selection under multiple testing.
 
 The problem: N(N-1)/2 pairs are screened, so at level alpha a fraction alpha of
 them look significant by chance alone. On this universe the screener finds ~47
@@ -40,14 +40,14 @@ def benjamini_hochberg(pvals: np.ndarray, alpha: float = 0.05) -> np.ndarray:
     Step-up procedure: sort p_(1) <= ... <= p_(N), find the largest k with
     p_(k) <= k*alpha/N, reject the k smallest.
 
-    FDR is the right target for a screener: it bounds the EXPECTED PROPORTION of
+    FDR is the right target for a screener: it bounds the Expected Proportion of
     selected pairs that are spurious, rather than the probability of any error.
     Accepting that 5 percent of a 40-pair basket is junk is a sane trade; demanding
     a 95 percent chance of zero junk is not.
 
     Validity requires independence or positive regression dependence (PRDS).
     Pair tests sharing a leg are positively dependent, which is suggestive but
-    not a proof that PRDS holds here -- hence `benjamini_yekutieli` below.
+    not a proof that PRDS holds here, hence `benjamini_yekutieli` below.
     """
     p = np.asarray(pvals, dtype=float)
     n = len(p)
@@ -64,11 +64,11 @@ def benjamini_hochberg(pvals: np.ndarray, alpha: float = 0.05) -> np.ndarray:
 
 
 def benjamini_yekutieli(pvals: np.ndarray, alpha: float = 0.05) -> np.ndarray:
-    """FDR control valid under ARBITRARY dependence.
+    """FDR control valid under Arbitrary dependence.
 
     Same step-up as BH with alpha replaced by alpha / H_N, where
     H_N = sum_{i=1}^{N} 1/i ~ ln N + 0.577. At N = 406, H_N = 6.6, so the
-    effective level is alpha / 6.6 -- a heavy price, but it is the honest option
+    effective level is alpha / 6.6, a heavy price, but it is the honest option
     when the dependence structure is unknown and demonstrably strong.
     """
     n = len(pvals)
@@ -78,7 +78,7 @@ def benjamini_yekutieli(pvals: np.ndarray, alpha: float = 0.05) -> np.ndarray:
     return benjamini_hochberg(pvals, alpha / h_n)
 
 
-CORRECTIONS = {
+Corrections = {
     "naive": lambda p, a: np.asarray(p) <= a,
     "bonferroni": bonferroni,
     "bh": benjamini_hochberg,
@@ -92,7 +92,7 @@ def n_discoveries(pvals: np.ndarray, alpha: float = 0.05) -> pd.Series:
     return pd.Series({
         "n_tests": len(p),
         "expected_under_null": alpha * len(p),
-        **{k: int(f(p, alpha).sum()) for k, f in CORRECTIONS.items()},
+        **{k: int(f(p, alpha).sum()) for k, f in Corrections.items()},
     })
 
 
@@ -104,8 +104,8 @@ def walk_forward_folds(index: pd.DatetimeIndex, start: str, end: str,
     """Successive (in-sample, out-of-sample) windows that never overlap.
 
     The in-sample window ends strictly before the out-of-sample window begins.
-    Everything -- universe, liquidity filter, cointegration test, hedge ratio,
-    z-score calibration -- is estimated on the in-sample window and then FROZEN.
+    Everything, universe, liquidity filter, cointegration test, hedge ratio,
+    z-score calibration, is estimated on the in-sample window and then Frozen.
     Re-testing during the trading window would reintroduce look-ahead.
     """
     folds = []
@@ -129,9 +129,9 @@ def walk_forward_folds(index: pd.DatetimeIndex, start: str, end: str,
 
 def liquidity_filter(dollar_volume: pd.DataFrame, is_window: pd.DatetimeIndex,
                      tickers: list[str], min_adv: float = 2e7) -> list[str]:
-    """Median dollar volume over the IN-SAMPLE window only.
+    """Median dollar volume over the IN-Sample window only.
 
-    Computing this on the full sample would select names that REMAIN liquid --
+    Computing this on the full sample would select names that Remain liquid --
     information correlated with survival, hence survivorship bias wearing a
     technical disguise.
     """

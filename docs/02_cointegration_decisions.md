@@ -1,14 +1,13 @@
-# Phase 2 — Cointegration building blocks: decision record
+# Cointegration building blocks: decision record
 
 Companion to `src/cointegration.py` and `tests/test_cointegration.py`.
-Written in English; Phase 1 documents exist in both French and English.
 
 ---
 
-## 0. A Phase 1 correction that must be stated first
+## 0. A correction to the earlier pair screen
 
-Phase 1 tested cointegration by regressing A on B and running `adfuller` on the
-residual. **That is wrong**, and the error is large.
+The first version of the screen tested cointegration by regressing A on B and
+running `adfuller` on the residual. That is wrong, and the error is large.
 
 The ADF test assumes it is applied to an *observed* series. Here the residual is
 **estimated**: OLS chose β precisely to minimise its variance, so the residual is
@@ -39,11 +38,11 @@ Every Phase 2 function uses `coint`. The Phase 1 notebooks are left as written
 
 ## 1. Hedge ratio: OLS for testing, TLS as a robustness check
 
-**Decision.** Estimate β by OLS with a fixed alphabetical ordering convention
+Decision. Estimate β by OLS with a fixed alphabetical ordering convention
 (`a < b`, `a` the dependent variable). Expose a total-least-squares estimator to
 verify conclusions do not hinge on the regression direction.
 
-**Why the convention matters.** OLS minimises *vertical* errors, so it assigns
+Why the convention matters. OLS minimises *vertical* errors, so it assigns
 all noise to the left-hand variable. Consequently
 
     β(A|B) · β(B|A) = R²
@@ -51,15 +50,13 @@ all noise to the left-hand variable. Consequently
 (verified as a unit test), so the two directions disagree by exactly the factor
 R². The noisier the relation, the larger the disagreement.
 
-**The three options, and why the middle one is forbidden.**
-
-| Option | Verdict |
+The three options, and why the middle one is forbidden. | Option | Verdict |
 |---|---|
 | Fixed convention (alphabetical) | **Chosen.** Arbitrary but frozen, and therefore not a researcher degree of freedom. |
-| Test both directions, keep the better p-value | **Forbidden.** Doubles the number of tests and biases selection toward whichever direction happened to look better — a multiple-testing problem disguised as a modelling choice. |
+| Test both directions, keep the better p-value | **Forbidden.** Doubles the number of tests and biases selection toward whichever direction happened to look better, a multiple-testing problem disguised as a modelling choice. |
 | Total least squares | Symmetric by construction (β(A\|B) = 1/β(B\|A) exactly), which is the honest thing when neither leg has privileged status. But it assumes both legs carry comparable noise, and the Engle-Granger machinery is built on an OLS first stage, so the p-value would no longer be valid. Kept as a robustness check. |
 
-**Lag selection.** `maxlag=1`, fixed, rather than AIC-selected. AIC is standard
+Lag selection. `maxlag=1`, fixed, rather than AIC-selected. AIC is standard
 but makes the lag a data-dependent choice, adding one more degree of freedom to
 a screener already running hundreds of tests. A fixed lag is defensible
 *because* it is not chosen.
@@ -68,7 +65,7 @@ a screener already running hundreds of tests. A fixed lag is defensible
 
 ## 2. Half-life: derivation, and a bias that matters
 
-**Derivation.** Regress the change on the level:
+Derivation. Regress the change on the level:
 
     Δs_t = a + b·s_{t-1} + ε      ⟺      s_t = a + (1+b)·s_{t-1} + ε
 
@@ -79,7 +76,7 @@ Write φ = 1 + b. A shock decays as φᵏ, so the half-life solves φʰ = ½:
 Link to Ornstein-Uhlenbeck: ds = θ(μ − s)dt + σ dW discretises to φ = e^(−θΔt),
 hence half_life = ln 2 / θ. The same object.
 
-**The bias — this is the part that is not in the textbooks' summary.** Near a
+The bias, this is the part that is not in the textbooks' summary. Near a
 unit root the OLS estimate of φ is biased *downward* (Dickey-Fuller bias). A
 pure random walk therefore does **not** return NaN; it returns a finite, large
 half-life. Measured on 4000 random walks of 750 observations:
@@ -91,13 +88,13 @@ half-life. Measured on 4000 random walks of 750 observations:
 | Share passing hl ≤ 60 | 18.4 % |
 | Share passing hl ≤ 30 | 2.7 % |
 
-**A diagnostic falls out of this.** On a genuine random walk the estimated
-half-life *grows with the estimation window* — 76 d at n=500, 111 d at n=750,
-222 d at n=1500 — because there is no true half-life to recover; the estimate
+A diagnostic falls out of this. On a genuine random walk the estimated
+half-life *grows with the estimation window*, 76 d at n=500, 111 d at n=750,
+222 d at n=1500, because there is no true half-life to recover; the estimate
 merely tracks the window length. A half-life unstable across window lengths is a
 red flag.
 
-**Consequence.** The half-life is a **tradability filter applied after** the
+Consequence. The half-life is a **tradability filter applied after** the
 cointegration test has done the statistical work. It must never be used to
 decide whether a spread mean-reverts.
 
@@ -105,24 +102,24 @@ decide whether a spread mean-reverts.
 
 ## 3. Causal z-score
 
-**Decision.** Rolling window of 60 days, using observations up to **and
+Decision. Rolling window of 60 days, using observations up to **and
 including** t.
 
-**Why not full-sample.** `z_t = (s_t − mean(s)) / std(s)` over the whole period
+Why not full-sample. `z_t = (s_t − mean(s)) / std(s)` over the whole period
 injects the future into every observation: the strategy would "know" the
 spread's eventual average level, which is precisely what it is supposed to be
 betting on. It is the single most common leak in pairs trading.
 
-**Why t is included.** t is the close on which the signal is computed. Execution
+Why t is included. t is the close on which the signal is computed. Execution
 is lagged to t+1 in the backtest (Phase 6). The leak would be to execute at t,
 not to observe t.
 
-**Why 60 days.** The window must be several times the half-life. Otherwise the
+Why 60 days. The window must be several times the half-life. Otherwise the
 rolling mean tracks the spread itself, the z-score is systematically pulled
 toward zero, and the estimator eats its own signal. Sixty days suits the 2-30
 day half-lives the quality filter admits.
 
-**Guardrail.** `test_rolling_zscore_is_causal` rewrites the series *after* index
+Guardrail. `test_rolling_zscore_is_causal` rewrites the series *after* index
 k and asserts the z-scores up to k are bit-identical. If anyone ever swaps in a
 full-sample or centred window, the test fails immediately. A companion test
 keeps the naive version around as an executable counter-example.
@@ -135,12 +132,12 @@ Applied **after** the statistical test, **in-sample only**.
 
 ### 4.1 Half-life band: 2 ≤ hl ≤ 30 days
 
-- **hl < 2**: dominated by microstructure noise and bid-ask bounce; the implied
+- hl < 2. dominated by microstructure noise and bid-ask bounce; the implied
   turnover lets transaction costs eat the edge (Phase 6 quantifies it).
-- **hl > 30**: two independent arguments converge. *Economic* — the
+- hl > 30. two independent arguments converge. *Economic*, the
   out-of-sample window is one year (~250 sessions), so a 60-day half-life allows
   only ~4 reversion cycles, too few round trips to say anything statistical, and
-  a long exposure to the relation breaking before it reverts. *Statistical* —
+  a long exposure to the relation breaking before it reverts. *Statistical* , 
   because of the bias above, a loose bound admits random walks: 18.4 % pass at
   hl_max = 60 against 2.7 % at hl_max = 30.
 
@@ -157,8 +154,8 @@ the other as decoration.
 - **β near 0 or near infinity** means a degenerate regression. This bites when
   the legs have very different volatility: OLS shrinks β toward zero and the
   residual becomes a rescaled copy of the dependent variable. On the same
-  screen, **NRG** — a merchant generator, far more volatile than the regulated
-  names — appeared in **13 of 41** significant pairs (32 %, against 3.2 expected
+  screen, **NRG**, a merchant generator, far more volatile than the regulated
+  names, appeared in **13 of 41** significant pairs (32 %, against 3.2 expected
   under a uniform spread), every one with β between 0.13 and 0.30. Those were
   near-degenerate regressions, not equilibrium relations.
 
@@ -169,7 +166,7 @@ depend on the alphabetical convention. Enforced by a unit test.
 
 ## 5. Two findings that set up Phase 3
 
-### 5.1 Discoveries barely exceed chance — and in two folds, not at all
+### 5.1 Discoveries barely exceed chance, and in two folds, not at all
 
 Under H₀, a test of level α still declares α·N pairs significant. Across the
 nine walk-forward folds:
@@ -189,11 +186,11 @@ nine walk-forward folds:
 Two folds (2015-2017, 2022-2024) find **nothing beyond pure chance**. Trading
 their selection is trading noise. The 2019-2021 and 2020-2022 spikes sit
 squarely on the COVID shock, where a common shock makes everything co-move and
-manufactures spurious cointegration — a caution, not a discovery.
+manufactures spurious cointegration, a caution, not a discovery.
 
 ### 5.2 The tests are not independent, and the selection is concentrated
 
-In **every** fold, one name holds 16 % to 50 % of the selected pairs — and it is
+In **every** fold, one name holds 16 % to 50 % of the selected pairs, and it is
 a different name each time (D, SRE, AEP, AEE, ETR, AWK). This is not one odd
 stock; it is a property of the method. Any name whose idiosyncratic path happens
 to look mean-reverting against the sector in-sample becomes a hub.
@@ -208,7 +205,7 @@ Two consequences:
    pairs. The effective number of independent tests is far below 406. This is
    exactly the regime where the choice between Bonferroni (valid under *any*
    dependence) and Benjamini-Hochberg (valid under independence or positive
-   regression dependence, PRDS) stops being cosmetic — and where a permutation
+   regression dependence, PRDS) stops being cosmetic, and where a permutation
    or block-bootstrap null becomes the honest alternative.
 
 ---

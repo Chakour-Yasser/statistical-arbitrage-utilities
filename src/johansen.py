@@ -1,22 +1,22 @@
 """
-Phase 5 (extension) -- cointegrated baskets via Johansen.
+Phase 5 (extension), cointegrated baskets via Johansen.
 
 Why Johansen rather than Engle-Granger
 --------------------------------------
 Engle-Granger needs a dependent variable, so it is asymmetric (Phase 2,
-Theorem 1) and it can only ever find ONE relation. Johansen tests the whole
+Theorem 1) and it can only ever find One relation. Johansen tests the whole
 system at once: it is symmetric in the assets, it recovers the cointegration
-RANK -- how many independent stationary combinations exist -- and it estimates
+Rank, how many independent stationary combinations exist, and it estimates
 all of them jointly by maximum likelihood on the vector error-correction model.
 For n = 2 the rank is 0 or 1 and the two approaches answer the same question;
 the generalisation only becomes interesting for baskets.
 
-The honest catch
+Cost of the approach
 ----------------
 The combinatorics explode. With 29 names there are 3654 triplets and 23751
 quadruplets, against 406 pairs. Every multiple-testing problem from Phase 3 gets
 an order of magnitude worse, and the trace test has no closed-form p-value in
-statsmodels -- only critical values at 90/95/99 percent. The null rejection rate
+statsmodels, only critical values at 90/95/99 percent. The null rejection rate
 is therefore measured by simulation here rather than assumed.
 """
 from __future__ import annotations
@@ -83,12 +83,12 @@ def basket_spread(log_px: pd.DataFrame, w: pd.Series) -> pd.Series:
 def screen_baskets(log_px: pd.DataFrame, tickers: list[str], size: int = 3,
                    k_ar_diff: int = 1, max_groups: int | None = None,
                    seed: int = 0) -> pd.DataFrame:
-    """Johansen on every group of `size` names. IN-SAMPLE ONLY.
+    """Johansen on every group of `size` names. IN-Sample only.
 
     `max_groups` subsamples the groups when the full enumeration is too large.
     Subsampling is done with a fixed seed and the count is reported, because the
     number of groups tried is exactly the quantity a multiple-testing correction
-    needs -- and it is the number candidates most often forget to disclose.
+    needs, and it is the number candidates most often forget to disclose.
     """
     groups = list(itertools.combinations(sorted(tickers), size))
     n_total = len(groups)
@@ -123,10 +123,10 @@ def screen_baskets(log_px: pd.DataFrame, tickers: list[str], size: int = 3,
 
 def null_rejection_rate(n_series: int = 3, n_obs: int = 750, n_sim: int = 300,
                         k_ar_diff: int = 1, seed: int = 0) -> float:
-    """Share of INDEPENDENT random-walk systems the trace test calls cointegrated.
+    """Share of Independent random-walk systems the trace test calls cointegrated.
 
     statsmodels gives critical values, not p-values, so the effective level of
-    the test has to be measured rather than assumed -- exactly the discipline
+    the test has to be measured rather than assumed, exactly the discipline
     that caught the 14.6 percent Engle-Granger size distortion in Phase 2.
     """
     rng = np.random.default_rng(seed)

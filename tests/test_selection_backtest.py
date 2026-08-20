@@ -33,7 +33,7 @@ def test_by_is_more_conservative_than_bh():
 
 
 def test_bh_step_up_takes_everything_below_the_last_crossing():
-    """The step-up rule rejects all p-values below the LARGEST k that satisfies
+    """The step-up rule rejects all p-values below the Largest k that satisfies
     the bound, not only those individually below their own threshold."""
     p = np.array([0.001, 0.02, 0.025, 0.9])          # k*alpha/N = .0125,.025,.0375,.05
     got = benjamini_hochberg(p, 0.05)
@@ -66,7 +66,7 @@ def test_folds_roll_forward_one_year_at_a_time():
 
 
 def test_liquidity_filter_ignores_everything_after_the_in_sample_window():
-    """A name that is liquid only AFTER the in-sample window must not be picked:
+    """A name that is liquid only after the in-sample window must not be picked:
     that would be survivorship bias wearing a technical disguise."""
     idx = pd.bdate_range("2020-01-01", "2021-12-31")
     dv = pd.DataFrame(1e6, index=idx, columns=["OLD", "NEW"])

@@ -16,7 +16,7 @@ from .backtest import metrics, pair_pnl, pair_positions
 from .cointegration import (PairResult, calibrate_zscore, passes_quality,
                             screen_pairs, spread_from_beta, zscore_frozen)
 from .regime import regime_flags
-from .selection import CORRECTIONS, liquidity_filter, walk_forward_folds
+from .selection import Corrections, liquidity_filter, walk_forward_folds
 
 _COLS = ("a", "b", "pvalue", "beta", "alpha", "half_life", "n_obs", "resid_std")
 
@@ -47,14 +47,14 @@ def run_fold(fold: dict, close: pd.DataFrame, dollar_volume: pd.DataFrame,
     scan["quality"] = [passes_quality(PairResult(**{k: r[k] for k in _COLS}))
                        for _, r in scan.iterrows()]
 
-    # trailing history for the causal regime statistics at the start of the OOS year
+    # trailing history for the causal regime statistics at the start of the Oos year
     hist_start = oos_win[0] - pd.Timedelta(days=420)
     ext = close.index[(close.index >= hist_start) & (close.index <= oos_win[-1])]
     rets = close.pct_change()
 
     out = {"fold": fold["fold"], "n_tests": len(scan), "n_tickers": len(tickers)}
     for method in methods:
-        keep = CORRECTIONS[method](scan["pvalue"].values, alpha) & scan["quality"].values
+        keep = Corrections[method](scan["pvalue"].values, alpha) & scan["quality"].values
         sel = scan[keep]
         out[f"n_{method}"] = int(len(sel))
         if sel.empty:
@@ -66,7 +66,7 @@ def run_fold(fold: dict, close: pd.DataFrame, dollar_volume: pd.DataFrame,
             a, b, beta, al = r["a"], r["b"], r["beta"], r["alpha"]
             la_e, lb_e = log_px[a].reindex(ext), log_px[b].reindex(ext)
             spread_is = spread_from_beta(log_px[a].loc[is_win], log_px[b].loc[is_win], beta, al)
-            mu, sd = calibrate_zscore(spread_is)                       # FROZEN
+            mu, sd = calibrate_zscore(spread_is)                       # Frozen
             z_ext = zscore_frozen(spread_from_beta(la_e, lb_e, beta, al), mu, sd)
 
             broken = None
@@ -95,7 +95,7 @@ def run_fold(fold: dict, close: pd.DataFrame, dollar_volume: pd.DataFrame,
 def run_walk_forward(close: pd.DataFrame, dollar_volume: pd.DataFrame,
                      memb: pd.DataFrame, use_regime: bool = True,
                      cost_bps: float = 5.0, alpha: float = 0.05) -> tuple:
-    folds = walk_forward_folds(close.index, C.START, C.END)
+    folds = walk_forward_folds(close.index, C.Start, C.End)
     rows, curves = [], {}
     for f in folds:
         r = run_fold(f, close, dollar_volume, memb, alpha=alpha,

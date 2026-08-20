@@ -15,17 +15,17 @@ close = pd.read_parquet(C.DATA_PROC / "prices_adj.parquet")
 dv    = pd.read_parquet(C.DATA_PROC / "dollar_volume.parquet")
 memb  = tradable_universe(pd.read_parquet(C.DATA_PROC / "membership_utilities.parquet"), close)
 lp, rets = np.log(close), close.pct_change()
-folds = walk_forward_folds(close.index, C.START, C.END)
+folds = walk_forward_folds(close.index, C.Start, C.End)
 
-MAXG, SIZE = 1200, 3
-null_rate = null_rejection_rate(n_series=SIZE, n_obs=750, n_sim=1500, seed=7)
-print(f"Johansen trace test, {SIZE} series, T=750: null rejection rate = {100*null_rate:.2f} % "
+Maxg, Size = 1200, 3
+null_rate = null_rejection_rate(n_series=Size, n_obs=750, n_sim=1500, seed=7)
+print(f"Johansen trace test, {Size} series, T=750: null rejection rate = {100*null_rate:.2f} % "
       f"(nominal 5 %)\n", flush=True)
 
 rows, curves = [], []
 for f in folds:
     tk = liquidity_filter(dv, f["is"], _universe_at(memb, f["selection_date"]))
-    sc = screen_baskets(lp.loc[f["is"]], tk, size=SIZE, max_groups=MAXG)
+    sc = screen_baskets(lp.loc[f["is"]], tk, size=Size, max_groups=Maxg)
     if sc.empty:
         continue
     n_tested = sc.attrs["n_groups_tested"]

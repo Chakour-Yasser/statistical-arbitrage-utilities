@@ -1,10 +1,10 @@
 """
-Phase 2 -- cointegration building blocks.
+Phase 2, cointegration building blocks.
 
 Every function here is causal by construction or explicitly documented as an
 in-sample estimator. The two traps this module exists to avoid:
 
-1. WRONG CRITICAL VALUES. Running `adfuller` on an OLS residual is the standard
+1. wrong critical values. Running `adfuller` on an OLS residual is the standard
    textbook mistake. The residual is *estimated*: OLS picked beta precisely to
    minimise its variance, so it is "as stationary as possible" by construction.
    The test statistic's distribution shifts and ADF critical values become far
@@ -14,7 +14,7 @@ in-sample estimator. The two traps this module exists to avoid:
    A 3.5x inflation of the false-positive rate, before multiple testing even
    enters the picture. We therefore always use `statsmodels.tsa.stattools.coint`.
 
-2. NON-CAUSAL Z-SCORE. Standardising a spread with the full-sample mean and
+2. non-causal z-score. Standardising a spread with the full-sample mean and
    standard deviation uses the future at every instant. It is the single most
    common leak in pairs trading. `rolling_zscore` is causal, and
    tests/test_cointegration.py contains a test that fails if it ever stops
@@ -35,7 +35,7 @@ from statsmodels.tsa.stattools import coint
 def hedge_ratio_ols(la: np.ndarray, lb: np.ndarray) -> tuple[float, float]:
     """OLS of `la` on `lb`. Returns (beta, alpha).
 
-    ASYMMETRY -- the limitation to state in an interview. OLS minimises
+    Asymmetry, the limitation to state in an interview. OLS minimises
     *vertical* errors, so it assigns all measurement noise to the left-hand
     variable. Consequently beta(A|B) != 1 / beta(B|A): the two regressions
     differ by a factor R^2. The gap widens as the relation gets noisier --
@@ -49,7 +49,7 @@ def hedge_ratio_ols(la: np.ndarray, lb: np.ndarray) -> tuple[float, float]:
 def hedge_ratio_tls(la: np.ndarray, lb: np.ndarray) -> tuple[float, float]:
     """Total least squares (orthogonal regression). Returns (beta, alpha).
 
-    Minimises the PERPENDICULAR distance to the line rather than the vertical
+    Minimises the Perpendicular distance to the line rather than the vertical
     one, which treats both legs symmetrically: beta(A|B) == 1 / beta(B|A)
     exactly. Computed as the first principal component of the centred data.
 
@@ -59,7 +59,7 @@ def hedge_ratio_tls(la: np.ndarray, lb: np.ndarray) -> tuple[float, float]:
     thing to do when neither leg has a privileged status. But it assumes both
     legs carry comparable noise, and it has no closed-form standard error, so
     the Engle-Granger test machinery (built on an OLS first stage) no longer
-    applies directly. We therefore use OLS for TESTING and expose TLS to check
+    applies directly. We therefore use OLS for Testing and expose TLS to check
     that conclusions do not hinge on the regression direction.
     """
     x = np.column_stack([lb - lb.mean(), la - la.mean()])
@@ -82,8 +82,8 @@ def spread_from_beta(la, lb, beta: float, alpha: float):
 def half_life(spread: np.ndarray) -> float:
     """Half-life of mean reversion, in periods (days here).
 
-    Derivation -- know this one by heart
-    -----------------------------------
+    Derivation, know this one by heart
+    ----------------------------------
     Regress the change on the level:      ds_t = a + b * s_{t-1} + eps
     which is an AR(1):                    s_t  = a + (1 + b) s_{t-1} + eps
     Write phi = 1 + b. A shock decays as phi^k, so the half-life solves
@@ -97,10 +97,10 @@ def half_life(spread: np.ndarray) -> float:
     Returns NaN when phi is outside (0, 1): phi >= 1 means no mean reversion,
     phi <= 0 means alternating behaviour that the OU model does not describe.
 
-    CRITICAL CAVEAT -- this estimator is biased and is NOT a stationarity test
-    -------------------------------------------------------------------------
+    Critical Caveat, this estimator is biased and is not a stationarity test
+    ------------------------------------------------------------------------
     Near a unit root the OLS estimate of phi is biased downward (the classic
-    Dickey-Fuller bias). A pure random walk therefore does NOT return NaN: it
+    Dickey-Fuller bias). A pure random walk therefore does not return NaN: it
     returns a finite, large half-life. Measured on 4000 random walks of 750
     observations (our in-sample window length):
 
@@ -110,12 +110,12 @@ def half_life(spread: np.ndarray) -> float:
         share passing hl<=30  :   2.7 %
 
     A useful diagnostic falls out of this: on a genuine random walk the
-    estimated half-life GROWS with the estimation window (76 d at n=500, 111 d
+    estimated half-life Grows with the estimation window (76 d at n=500, 111 d
     at n=750, 222 d at n=1500), because there is no true half-life to recover --
     the estimate merely tracks the window length. A half-life that is unstable
     across window lengths is a red flag.
 
-    Consequence for the pipeline: the half-life is a TRADABILITY filter applied
+    Consequence for the pipeline: the half-life is a Tradability filter applied
     *after* the cointegration test has done the statistical work. It must never
     be used to decide whether a spread mean-reverts.
     """
@@ -170,7 +170,7 @@ class PairResult:
 
 def engle_granger(la: np.ndarray, lb: np.ndarray, name_a: str = "A",
                   name_b: str = "B", maxlag: int = 1) -> PairResult:
-    """Engle-Granger cointegration test with the CORRECT critical values.
+    """Engle-Granger cointegration test with the Correct critical values.
 
     `coint` runs the OLS first stage internally and evaluates the ADF statistic
     against MacKinnon's Engle-Granger distribution, which accounts for the fact
@@ -202,7 +202,7 @@ def rolling_zscore(spread: pd.Series, window: int = 60,
                    min_periods: int | None = None) -> pd.Series:
     """Causal z-score: at date t, uses only observations up to and including t.
 
-    WHY NOT A FULL-SAMPLE Z-SCORE
+    Why not a full-sample z-score
     -----------------------------
     z_t = (s_t - mean(s)) / std(s) computed over the whole period injects the
     future into every single observation. The strategy would "know" the spread's
@@ -214,8 +214,8 @@ def rolling_zscore(spread: pd.Series, window: int = 60,
     computed. Execution is then lagged to t+1 in the backtest (Phase 6). The
     leak would be to execute at t.
 
-    NOT THE DEFAULT FOR THE BACKTEST -- see `zscore_frozen`. On a strongly
-    autocorrelated spread this estimator is biased, and the bias INFLATES the
+    not The Default For The Backtest, see `zscore_frozen`. On a strongly
+    autocorrelated spread this estimator is biased, and the bias Inflates the
     z-score (numerator shrinks, denominator shrinks more), firing about 2.5x too
     many entries at a 30-day half-life. Kept because it is what most published
     implementations use and because Phase 4 needs a genuinely adaptive
@@ -240,21 +240,21 @@ def calibrate_zscore(spread_is: pd.Series | np.ndarray) -> tuple[float, float]:
 
 
 def zscore_frozen(spread: pd.Series, mu: float, sigma: float) -> pd.Series:
-    """z_t = (s_t - mu) / sigma with mu, sigma FROZEN from the in-sample window.
+    """z_t = (s_t - mu) / sigma with mu, sigma Frozen from the in-sample window.
 
-    WHY THIS IS THE DEFAULT, AND ROLLING IS NOT
-    -------------------------------------------
-    A rolling z-score looks safer -- it adapts -- but on a strongly
+    Choice of estimator
+    -------------------
+    A rolling z-score looks safer, it adapts, but on a strongly
     autocorrelated spread it is badly biased, and the bias inflates the signal
     count rather than damping it.
 
     For a stationary AR(1) with parameter phi, the variance of a W-point rolling
-    mean is Var(s) / W_eff, with the EXACT effective sample size
+    mean is Var(s) / W_eff, with the Exact effective sample size
 
         W_eff = W^2 / ( W + 2 * sum_{k=1}^{W-1} (W-k) phi^k )
 
     (the familiar asymptotic form W(1-phi)/(1+phi) is valid only for
-    W >> 1/(1-phi) and is off by a factor ~2 in our range -- it gives 0.69 where
+    W >> 1/(1-phi) and is off by a factor ~2 in our range, it gives 0.69 where
     the exact value is 1.51). Effective sample sizes, simulation-verified:
 
         half-life    phi      W_eff(W=60)    W_eff(in-sample T=750)
@@ -272,19 +272,19 @@ def zscore_frozen(spread: pd.Series, mu: float, sigma: float) -> pd.Series:
             30 d       0.76         0.56       1.36   11.7 % (vs 4.6 %)
 
     The numerator shrinks because the rolling mean tracks the spread. But the
-    rolling standard deviation shrinks MORE, because it measures the LOCAL
+    rolling standard deviation shrinks More, because it measures the Local
     dispersion of a highly autocorrelated series rather than its unconditional
-    dispersion. The quotient therefore exceeds 1: the z-score is INFLATED, and
+    dispersion. The quotient therefore exceeds 1: the z-score is Inflated, and
     the strategy fires roughly 2.5x too many entries at a 30-day half-life.
 
     Freezing (mu, sigma) on the in-sample window raises the effective sample size
     from 1.5 to 9.2 at a 30-day half-life and roughly halves the distortion
     (share of |z|>2 days at h=30: 11.4 % rolling, 8.0 % frozen, 4.6 % true). It
-    does NOT eliminate it, because the in-sample window itself carries only ~9
+    does not eliminate it, because the in-sample window itself carries only ~9
     effective observations at that half-life.
 
     Two consequences to carry into Phase 6. First, an entry threshold of |z| > 2
-    is not a reliable prior on trade frequency -- realised turnover must be
+    is not a reliable prior on trade frequency, realised turnover must be
     measured, not assumed. Second, the half-life cap does triple duty: it bounds
     turnover, it keeps random walks out (see `passes_quality`), and it keeps the
     in-sample effective sample size large enough for sigma to be estimable at
@@ -308,7 +308,7 @@ def zscore_frozen(spread: pd.Series, mu: float, sigma: float) -> pd.Series:
 def passes_quality(res: PairResult, hl_min: float = 2.0, hl_max: float = 30.0,
                    min_obs: int = 500, beta_min: float = 1/3,
                    beta_max: float = 3.0) -> bool:
-    """Tradability filter, applied AFTER the statistical test, in-sample only.
+    """Tradability filter, applied after the statistical test, in-sample only.
 
     Two bounds, both economic rather than statistical:
 
@@ -317,14 +317,14 @@ def passes_quality(res: PairResult, hl_min: float = 2.0, hl_max: float = 30.0,
       it implies makes transaction costs eat the edge. Phase 6 quantifies this.
     - half-life > hl_max: the spread reverts too slowly to be traded. Capital is
       tied up for months, and the longer the horizon the likelier the relation
-      breaks before reverting -- which is the whole subject of Phase 4.
+      breaks before reverting, which is the whole subject of Phase 4.
 
     Why hl_max = 30 and not 60
     --------------------------
     Two independent arguments converge on 30 days.
 
     Economic: the out-of-sample trading window is one year (~250 sessions). A
-    60-day half-life allows roughly 4 reversion cycles per year -- too few round
+    60-day half-life allows roughly 4 reversion cycles per year, too few round
     trips to say anything statistical about the pair, and a long exposure to the
     relation breaking before it reverts.
 
@@ -335,12 +335,12 @@ def passes_quality(res: PairResult, hl_min: float = 2.0, hl_max: float = 30.0,
     against a spread that does not actually revert.
 
     Why a hedge-ratio band, and why it is symmetric in 1/beta
-    --------------------------------------------------------
+    ---------------------------------------------------------
     A beta outside a sane band is not a hedge, it is a directional bet on one
     leg with the other leg as decoration.
 
-    - beta <= 0 means going long BOTH legs. The position carries full sector
-      exposure and market neutrality -- the entire premise -- is gone. On the
+    - beta <= 0 means going long Both legs. The position carries full sector
+      exposure and market neutrality, the entire premise, is gone. On the
       2016-2018 screen, all five negative-beta pairs involved PCG (collapsing on
       the wildfire liabilities) or SCG (the nuclear-project scandal): a negative
       beta "fits" two names trending in opposite directions, with no economic
@@ -348,8 +348,8 @@ def passes_quality(res: PairResult, hl_min: float = 2.0, hl_max: float = 30.0,
     - beta near 0 (or symmetrically, near infinity) means the regression is
       degenerate. This bites when the two legs have very different volatility:
       OLS shrinks beta toward zero and the residual becomes little more than a
-      rescaled copy of the dependent variable. On the same screen, NRG -- a
-      merchant generator, far more volatile than the regulated names -- appeared
+      rescaled copy of the dependent variable. On the same screen, NRG, a
+      merchant generator, far more volatile than the regulated names, appeared
       in 13 of 41 significant pairs (32 %, against 3.2 expected under uniform
       spread), every one of them with beta between 0.13 and 0.30. Those were not
       equilibrium relations; they were near-degenerate regressions.
@@ -371,15 +371,15 @@ def screen_pairs(log_prices: pd.DataFrame, tickers: list[str],
                  maxlag: int = 1, min_obs: int = 500) -> pd.DataFrame:
     """Run Engle-Granger on every pair of `tickers` over `log_prices`.
 
-    IN-SAMPLE ONLY. The caller is responsible for passing a window that ends
+    IN-Sample only. The caller is responsible for passing a window that ends
     before the trading period. Nothing in this function knows about time, so
-    nothing here protects against handing it out-of-sample data -- that
+    nothing here protects against handing it out-of-sample data, that
     discipline lives in the walk-forward loop (Phase 3).
 
     Pair ordering convention: alphabetical, i.e. `a < b`, with `a` as the
-    dependent variable. This is arbitrary but FIXED. Testing both directions and
+    dependent variable. This is arbitrary but Fixed. Testing both directions and
     keeping the better p-value would double the number of tests and bias the
-    selection toward whichever direction happened to look better -- a
+    selection toward whichever direction happened to look better, a
     multiple-testing problem disguised as a modelling choice.
     """
     import itertools
@@ -398,20 +398,20 @@ def screen_pairs(log_prices: pd.DataFrame, tickers: list[str],
 def concentration_report(selected: pd.DataFrame) -> pd.DataFrame:
     """How often each name appears in a selection. A diagnostic, not a filter.
 
-    WHY THIS MATTERS
-    ----------------
+    Interpretation
+    --------------
     A selection of 24 pairs in which one name appears 12 times is not 24 bets:
     it is one bet on that name reverting to the sector, expressed twelve ways.
     Position sizing that treats the pairs as independent would silently
     concentrate risk.
 
     Measured across the nine walk-forward folds, the dominant name holds between
-    16 % and 50 % of the selected pairs in EVERY fold -- and it is a different
-    name each time (D, SRE, AEP, AEE, ETR, AWK). So this is not one odd stock,
+    16 % and 50 % of the selected pairs in Every fold, and it is a different
+    name each time (D, Sre, Aep, Aee, Etr, Awk). So this is not one odd stock,
     it is a property of the method: any name whose idiosyncratic path happens to
     look mean-reverting against the sector in-sample becomes a hub.
 
-    The deeper consequence, which Phase 3 must handle: the pair tests are NOT
+    The deeper consequence, which Phase 3 must handle: the pair tests are not
     independent. All names share the sector factor, so a hub name induces strong
     positive dependence across its own pairs. The effective number of
     independent tests is far below N(N-1)/2, which is exactly the regime where
@@ -430,7 +430,7 @@ def concentration_report(selected: pd.DataFrame) -> pd.DataFrame:
 
 
 def excess_over_chance(scan: pd.DataFrame, alpha: float = 0.05) -> dict:
-    """Discoveries against what pure chance would produce -- Phase 3's opening move.
+    """Discoveries against what pure chance would produce, Phase 3's opening move.
 
     Under H0 (no pair truly cointegrated) a test of level alpha still declares
     alpha * N pairs significant. Comparing the observed count to alpha * N is

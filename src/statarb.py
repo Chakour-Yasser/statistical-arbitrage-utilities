@@ -2,14 +2,13 @@
 Cross-sectional statistical arbitrage on PCA factor residuals.
 
 Method: Avellaneda and Lee (2010), "Statistical arbitrage in the US equities
-market". This replaces the pairs approach, and the replacement is a response to
-a measured failure rather than a new roll of the dice.
+market". This replaces the pairs approach, It follows from a measured failure of the pairs approach, documented below.
 
-WHAT WAS WRONG WITH PAIRS, AND WHAT THIS FIXES
-----------------------------------------------
+Background
+----------
 Measured on the utilities book: a pair cointegrated at 5 % over three years had a
-10.8 % chance of still being cointegrated the following year -- against 22.3 %
-for the pairs the screen had REJECTED. Selecting the lowest p-value out of 400
+10.8 % chance of still being cointegrated the following year, against 22.3 %
+for the pairs the screen had rejected. Selecting the lowest p-value out of 400
 selects the residual that was luckiest in sample, and luck does not repeat. On
 top of that the equilibrium level itself moved by a median of 1.47 in-sample
 sigmas between the estimation window and the trading year.
@@ -23,7 +22,7 @@ This method removes both failure modes by construction:
   breadth           several hundred simultaneous residual bets instead of the
                     2-3 independent bets a concentrated pairs book really holds
   a real mechanism  a residual that dislocates without news is an order-imbalance
-                    event -- a fund liquidating, an index rebalance. Taking the
+                    event, a fund liquidating, an index rebalance. Taking the
                     other side supplies liquidity, and being paid for that is an
                     economic mechanism rather than a statistical coincidence
 
@@ -45,14 +44,14 @@ def marchenko_pastur_count(eigenvalues: np.ndarray, n_assets: int, n_obs: int,
     """Number of eigenvalues that stand above the pure-noise bound.
 
     For a sample correlation matrix built from n_obs observations of n_assets
-    series, the eigenvalues of a NOISE matrix fill the Marchenko-Pastur support
+    series, the eigenvalues of a Noise matrix fill the Marchenko-Pastur support
     up to (1 + sqrt(N/T))^2. Anything below that is indistinguishable from
     sampling error.
 
     This matters here because N/T is about 1.7: the sample correlation matrix is
     rank-deficient, and only the first handful of eigenvectors carry signal.
     Measured on this universe, 6 to 9 eigenvalues clear the bound depending on
-    the date -- against the 15 factors originally hedged. Hedging a name against
+    the date, against the 15 factors originally hedged. Hedging a name against
     six noise directions removes genuine residual signal and rebalances a random
     hedge every day, paying turnover for nothing.
     """
@@ -63,10 +62,10 @@ def marchenko_pastur_count(eigenvalues: np.ndarray, n_assets: int, n_obs: int,
 def eigen_portfolios(returns: np.ndarray, n_factors: int) -> np.ndarray:
     """Risk-adjusted eigenportfolio weights Q (n_assets x n_factors).
 
-    The PCA is run on the CORRELATION matrix, not the covariance matrix, so that
+    The PCA is run on the Correlation matrix, not the covariance matrix, so that
     a handful of high-volatility names cannot dominate the factor structure.
     The eigenvector is then divided by each asset's volatility, which turns a
-    correlation-space direction into a tradable dollar-weight portfolio -- this
+    correlation-space direction into a tradable dollar-weight portfolio, this
     is the Q_ij = v_ij / sigma_i construction of Avellaneda-Lee.
     """
     sd = returns.std(axis=0, ddof=1)
@@ -104,7 +103,7 @@ def residual_betas(returns: np.ndarray, factors: np.ndarray) -> tuple:
 def ou_scores(resid: np.ndarray) -> dict:
     """Fit an OU process to the cumulative residual of every asset, vectorised.
 
-    The residual RETURN is close to white noise; its cumulative sum X is the
+    The residual Return is close to white noise; its cumulative sum X is the
     quantity with an equilibrium level. Fitting AR(1) to X,
 
         X_{n+1} = a + b X_n + zeta,
@@ -117,7 +116,7 @@ def ou_scores(resid: np.ndarray) -> dict:
 
         s = (X_last - m) / sigma_eq,
 
-    which plays the role the z-score played for pairs -- but recomputed every day
+    which plays the role the z-score played for pairs, but recomputed every day
     from a trailing window, so it cannot go stale.
     """
     x = np.cumsum(resid, axis=0)
@@ -150,23 +149,23 @@ def target_positions(s: np.ndarray, prev: np.ndarray, tradable: np.ndarray,
                      s_max: float = np.inf) -> np.ndarray:
     """Avellaneda-Lee entry and exit bands, applied to the previous state.
 
-    A residual far BELOW equilibrium (s very negative) means the name is cheap
+    A residual far Below equilibrium (s very negative) means the name is cheap
     against its factor exposure, so we go long it and short the factors. The
     asymmetric exit bands are theirs: long positions are closed earlier than
     short ones, which reflects the asymmetry of equity residual distributions.
 
     `s_max` refuses to open beyond a dislocation size, and it is not a tuned
     guard: it comes from measuring E[r | s] on 415,743 observations. The relation
-    is NOT monotone. Mean next-period residual return by s bucket, in basis
+    is not monotone. Mean next-period residual return by s bucket, in basis
     points, with t-statistics:
 
         s = -2.15 : +3.51 (t=1.85)      s = +1.07 : -1.24 (t=-1.61)
         s = -1.70 : +4.56 (t=3.13)      s = +1.40 : -3.22 (t=-2.88)
         s = -1.08 : +2.32 (t=2.94)      s = +2.14 : -0.55 (t=-0.29)
 
-    The signal peaks around |s| ~ 1.4-1.7 and DIES in the extreme tails. The
+    The signal peaks around |s| ~ 1.4-1.7 and Dies in the extreme tails. The
     economic reading is that a very large residual move is usually news rather
-    than a dislocation -- a genuine repricing, which does not revert. Trading it
+    than a dislocation, a genuine repricing, which does not revert. Trading it
     is buying into a trend while calling it mean reversion.
 
     This also explains why the closed-form cost optimiser underperforms this
@@ -187,9 +186,66 @@ def target_positions(s: np.ndarray, prev: np.ndarray, tradable: np.ndarray,
     return pos
 
 
+class EmpiricalMu:
+    """Causal estimate of E[next residual return | s], as a binned lookup.
+
+    Motivation
+    ----------
+    A convex optimiser dominates any heuristic, for its own objective, given
+    its own inputs. Fed the OU-implied expected return, which is linear in s by
+    construction, it loses to a crude threshold rule, because the measured
+    E[r|s] is not linear: it peaks near |s| ~ 1.5 and flattens in the tails.
+
+    This class replaces the model-implied mu by a directly estimated one, so the
+    optimiser can be judged on its own terms rather than on a misspecification it
+    inherited. The estimate is Built only From Realised Past Observations: a pair
+    (s_t, r_{t+1}) enters the buffer only once r_{t+1} has happened, so the map
+    used at date t was fitted on data strictly earlier than t.
+
+    Bins are on a fixed grid rather than quantiles, so the mapping does not shift
+    underneath itself as the distribution of s moves. Bins with too few
+    observations fall back to zero, which is the conservative choice: no evidence
+    means no position.
+    """
+
+    def __init__(self, edges=None, min_count: int = 400, shrink: float = 0.5):
+        self.edges = np.array(edges if edges is not None
+                              else [-np.inf, -2.5, -2.0, -1.6, -1.3, -1.0, -0.6,
+                                    -0.2, 0.2, 0.6, 1.0, 1.3, 1.6, 2.0, 2.5, np.inf])
+        self.min_count = min_count
+        self.shrink = shrink
+        self._s: list = []
+        self._r: list = []
+        self._table = np.zeros(len(self.edges) - 1)
+
+    def update(self, s_vals: np.ndarray, r_next: np.ndarray) -> None:
+        ok = np.isfinite(s_vals) & np.isfinite(r_next)
+        if ok.any():
+            self._s.append(s_vals[ok]); self._r.append(r_next[ok])
+
+    def refit(self) -> None:
+        if not self._s:
+            return
+        s = np.concatenate(self._s); r = np.concatenate(self._r)
+        idx = np.digitize(s, self.edges[1:-1])
+        tbl = np.zeros(len(self.edges) - 1)
+        for b in range(len(tbl)):
+            sel = idx == b
+            n = int(sel.sum())
+            if n >= self.min_count:
+                # shrink toward zero: a noisy bin should not drive a large bet
+                tbl[b] = self.shrink * r[sel].mean()
+        self._table = tbl
+
+    def __call__(self, s_vals: np.ndarray) -> np.ndarray:
+        return self._table[np.digitize(s_vals, self.edges[1:-1])]
+
+
 def optimal_positions(s_score: np.ndarray, b: np.ndarray, sigma_eq: np.ndarray,
                       sigma_step: np.ndarray, prev: np.ndarray, tradable: np.ndarray,
-                      cost: float, risk_aversion: float) -> np.ndarray:
+                      cost: float, risk_aversion: float,
+                      mu_override: np.ndarray | None = None,
+                      horizon_alpha: bool = True) -> np.ndarray:
     """Cost-aware optimal holdings, in closed form.
 
     The threshold rule (enter at |s| > 1.25, exit at 0.5) plus a flat no-trade
@@ -210,14 +266,26 @@ def optimal_positions(s_score: np.ndarray, b: np.ndarray, sigma_eq: np.ndarray,
     So the no-trade band is no longer a tuned constant: it is the cost divided by
     the risk-adjusted alpha the trade would capture. A name whose signal barely
     covers its cost is left alone; one whose signal is strong is taken all the
-    way. That is the whole improvement, and it costs one extra line of algebra.
+    way. The extra cost is one line of algebra.
 
     The expected residual return comes from the OU fit itself. With
     X_{t+1} = a + b X_t + zeta and m = a/(1-b), the expected increment is
-    (b-1)(X_t - m) = -(1-b) sigma_eq s, so no new estimation is required -- the
+    (b-1)(X_t - m) = -(1-b) sigma_eq s, so no new estimation is required, the
     threshold rule simply discarded this quantity.
     """
-    mu = -(1.0 - b) * sigma_eq * s_score
+    mu = (-(1.0 - b) * sigma_eq * s_score if mu_override is None
+          else np.asarray(mu_override, dtype=float))
+    if horizon_alpha:
+        # A single-period objective compares one day of alpha against the cost of
+        # a full round trip, and therefore refuses to trade. The position is held
+        # for several half-lives, so the decision-relevant quantity is the
+        # cumulative expected reversion: sum_k E[r_{t+k}] = mu / (1 - b). This is
+        # the myopic-versus-multiperiod distinction of Garleanu-Pedersen, and it
+        # is the difference between an optimiser that trades and one that does
+        # not. Measured: with a one-day mu of 3-4 bp against a 2 bp cost, the
+        # myopic optimiser holds a gross exposure of 0.01.
+        decay = np.clip(1.0 - b, 1e-3, 1.0)
+        mu = mu / decay
     var = np.where(sigma_step > 0, sigma_step ** 2, np.nan)
     with np.errstate(invalid="ignore", divide="ignore"):
         w_unc = mu / (risk_aversion * var)
@@ -232,6 +300,38 @@ def optimal_positions(s_score: np.ndarray, b: np.ndarray, sigma_eq: np.ndarray,
     return np.nan_to_num(w, nan=0.0, posinf=0.0, neginf=0.0)
 
 
+def quantile_positions(signal: np.ndarray, tradable: np.ndarray,
+                       frac: float = 0.15) -> np.ndarray:
+    """Long the top `frac` of the cross-section, short the bottom, equal weight.
+
+    Why not the hysteresis rule
+    ---------------------------
+    The entry/exit band was built for the s-score, which is a slow state variable:
+    a position opened at s < -1.25 stays in the profitable region for days, so
+    holding it collects the edge repeatedly. A one-step-ahead Forecast has no
+    such persistence, it reverts to the middle of the cross-section the next
+    day. Held under hysteresis, the position keeps its size while its expected
+    return has already gone to zero, so the strategy earns the edge on the entry
+    day and dilutes it over every day after.
+
+    Measured on the traded tails, the learned signal is worth +12.41 bp per day
+    long-short against +5.10 bp for the s-score, yet under hysteresis it produced
+    less than half the Sharpe. Rebalancing to the current extremes every day is
+    what turns a forecast into a portfolio.
+    """
+    z = np.where(tradable, signal, np.nan)
+    n = int(np.isfinite(z).sum())
+    if n < 20:
+        return np.zeros_like(z, dtype=float)
+    k = max(int(round(frac * n)), 1)
+    order = np.argsort(np.where(np.isfinite(z), z, -np.inf))
+    pos = np.zeros(len(z))
+    pos[order[-k:]] = 1.0                  # highest expected return -> long
+    pos[order[:k]] = -1.0
+    pos[~np.isfinite(z)] = 0.0
+    return pos
+
+
 def book_weights(pos: np.ndarray, beta: np.ndarray, q: np.ndarray,
                  normalise: bool = True) -> np.ndarray:
     # beta: (n_assets, n_factors)   q: (n_assets, n_factors)   pos: (n_assets,)
@@ -239,7 +339,7 @@ def book_weights(pos: np.ndarray, beta: np.ndarray, q: np.ndarray,
 
     Holding one dollar of name i means shorting beta_ij of each eigenportfolio j,
     and each eigenportfolio is itself a basket over the same names. Netting the
-    hedges ACROSS the book before computing turnover matters: summing the
+    hedges Across the book before computing turnover matters: summing the
     per-name hedges would overstate traded notional several-fold, since most of
     the factor exposure cancels between longs and shorts.
     """
@@ -268,9 +368,12 @@ def run_statarb(close: pd.DataFrame, dollar_volume: pd.DataFrame,
                 cost_bps: float = 5.0, s_open: float = 1.25,
                 no_trade_band: float = 0.0, beta_step: int = 1,
                 risk_scale: bool = False, adv_quantile: tuple | None = None,
-                s_max: float = np.inf,
+                s_max: float = np.inf, quantile_frac: float | None = None,
+                mu_table: pd.DataFrame | None = None,
+                signal_table: pd.DataFrame | None = None,
                 optimiser: bool = False, opt_cost_bps: float = 2.0,
-                opt_risk_aversion: float = 5e4,
+                opt_risk_aversion: float = 5e4, mu_mode: str = "ou",
+                mu_refit_every: int = 63, mu_warmup: int = 252,
                 periods_per_year: int = TRADING_DAYS,
                 null_permute: bool = False, seed: int = 0) -> pd.DataFrame:
     """Daily cross-sectional statistical arbitrage backtest.
@@ -280,7 +383,7 @@ def run_statarb(close: pd.DataFrame, dollar_volume: pd.DataFrame,
 
     `no_trade_band` is expressed as a multiple of the average absolute weight: a
     name is left untouched unless its target weight has moved by more than that.
-    Most of the daily turnover is not position changes but HEDGE DRIFT -- the
+    Most of the daily turnover is not position changes but Hedge Drift, the
     betas move a little every day, so the hedge legs are rebalanced every day for
     no informational reason. The band is a cost-control device, not a signal
     parameter: it never changes which names the model wants to hold, only how
@@ -288,6 +391,22 @@ def run_statarb(close: pd.DataFrame, dollar_volume: pd.DataFrame,
 
     `beta_step` re-estimates the factor loadings every k days instead of daily,
     for the same reason.
+
+    `mu_table` supplies an externally estimated expected residual return, indexed
+    by date with one column per symbol. This is how the learned signal replaces
+    the OU-implied mu: the optimiser is correct machinery, and it was only ever
+    losing because the expectation it was handed was linear in s by assumption
+    while the measured one is not.
+
+    `signal_table` replaces the s-score in the threshold rule by an external
+    signal, cross-sectionally standardised each day. This exists to separate two
+    questions that are easy to confuse: is the Signal better, or is the Portfolio
+    Construction better? Running a learned prediction through the identical entry
+    and exit machinery answers the first without the second interfering.
+
+    Sign convention: the s-score is high when a name is rich, and the rule shorts
+    it. A predicted return is high when a name is cheap. The caller passes the
+    prediction and it is negated here.
 
     `n_factors="mp"` picks the factor count each day from the Marchenko-Pastur
     noise bound instead of fixing it at 15. This is a correction, not a tuned
@@ -299,20 +418,20 @@ def run_statarb(close: pd.DataFrame, dollar_volume: pd.DataFrame,
     dominate the book's variance while contributing no more information than the
     quiet ones. Equalising risk contributions is the textbook construction.
 
-    `adv_quantile=(lo, hi)` restricts POSITIONS to names whose trailing dollar
+    `adv_quantile=(lo, hi)` restricts Positions to names whose trailing dollar
     volume falls in that quantile band of the cross-section, while the factor
     model keeps using the whole universe. This isolates the liquidity dimension:
     if the residual reversal premium is compensation for supplying liquidity, it
-    should be larger where liquidity is scarcer -- and so should the cost of
+    should be larger where liquidity is scarcer, and so should the cost of
     harvesting it.
 
-    `null_permute` randomises the SIGN of every return row: at each date, all
+    `null_permute` randomises the Sign of every return row: at each date, all
     symbols are multiplied by the same random +1 or -1. This is the null that
     isolates the effect being traded.
 
       preserved   the cross-sectional covariance at every date, hence the same
                   PCA, the same eigenportfolios, the same betas; the volatility
-                  clustering; and -- crucially -- the availability pattern, since
+                  clustering; and, crucially, the availability pattern, since
                   a NaN stays a NaN
       destroyed   the sign predictability of the cumulative residual, which is
                   exactly what mean reversion is
@@ -322,8 +441,8 @@ def run_statarb(close: pd.DataFrame, dollar_volume: pd.DataFrame,
     symbol retains a complete estimation window and the backtest produces nothing.
     Sign randomisation has no such problem.
 
-    Any Sharpe the strategy earns under this null is machinery, not signal.
-    Running it BEFORE reporting a positive result is the discipline this project
+    A Sharpe earned under this null comes from the machinery rather than from the data.
+    Running it before reporting a positive result is the discipline this project
     exists to demonstrate.
     """
     rets = close.pct_change()
@@ -335,6 +454,8 @@ def run_statarb(close: pd.DataFrame, dollar_volume: pd.DataFrame,
     dates = close.index
     start = max(pca_window, reg_window) + 1
     q = beta_full = None
+    emp_mu = EmpiricalMu() if mu_mode == "empirical" else None
+    pending = None                      # (cols, s_score, beta, q) awaiting its realised return
     prev_w = pd.Series(0.0, index=close.columns)
     pos_state = pd.Series(0.0, index=close.columns)
     rows = []
@@ -380,15 +501,47 @@ def run_statarb(close: pd.DataFrame, dollar_volume: pd.DataFrame,
             lo, hi = np.nanquantile(a, adv_quantile[0]), np.nanquantile(a, adv_quantile[1])
             tradable &= (a >= lo) & (a <= hi)
 
+        if emp_mu is not None:
+            if pending is not None:
+                pc, ps, pbeta, pq = pending
+                rn = rets.iloc[i].reindex(pc).values           # realised, so causal
+                fn = np.nan_to_num(rn, nan=0.0) @ pq
+                emp_mu.update(ps, rn - (pbeta[0] + fn @ pbeta[1:]))
+            pending = (cols, sc["s_score"].copy(), beta.copy(), q.copy())
+            if (i - start) % mu_refit_every == 0 and (i - start) >= mu_warmup:
+                emp_mu.refit()
+
+        s_used = sc["s_score"]
+        if signal_table is not None:
+            if t in signal_table.index:
+                v = signal_table.loc[t].reindex(cols).to_numpy(dtype=float)
+                sd_v = np.nanstd(v)
+                s_used = -(v - np.nanmean(v)) / (sd_v if sd_v > 0 else np.nan)
+                s_used = np.where(np.isfinite(s_used), s_used, np.nan)
+            else:
+                s_used = np.full(len(cols), np.nan)
+            tradable = tradable & np.isfinite(s_used)
+
         prev = pos_state.reindex(cols).fillna(0.0).values
         if optimiser:
+            mu_override = emp_mu(sc["s_score"]) if emp_mu is not None else None
+            if mu_table is not None:
+                if t in mu_table.index:
+                    mu_override = mu_table.loc[t].reindex(cols).to_numpy(dtype=float)
+                    mu_override = np.nan_to_num(mu_override, nan=0.0)
+                else:
+                    mu_override = np.zeros(len(cols))
             pos = optimal_positions(sc["s_score"], sc["b"], sc["sigma_eq"],
                                     sc["sigma_step"], prev, tradable,
                                     cost=opt_cost_bps / 1e4,
-                                    risk_aversion=opt_risk_aversion)
+                                    risk_aversion=opt_risk_aversion,
+                                    mu_override=mu_override)
         else:
-            pos = target_positions(sc["s_score"], prev, tradable, s_open=s_open,
-                                   s_max=s_max)
+            if quantile_frac is not None:
+                pos = quantile_positions(-s_used, tradable, quantile_frac)
+            else:
+                pos = target_positions(s_used, prev, tradable, s_open=s_open,
+                                       s_max=s_max)
         pos_state = pd.Series(0.0, index=close.columns)
         pos_state.loc[cols] = pos
 

@@ -26,3 +26,12 @@ scripts/crypto_grid.py
 scripts/liquidity_tercile.py
 scripts/opt_compare*.py
 scripts/smax_test.py
+notebooks/*.ipynb
+data/processed/ml_*.parquet
+data/processed/*.pkl
+scripts/mu_test.py
+scripts/rerun_ml.py
+scripts/run_ml_signal.py
+scripts/final_sharpes.py
+scripts/run_h5.py
+scripts/run_horizons.py

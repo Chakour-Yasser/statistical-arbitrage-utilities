@@ -14,13 +14,13 @@ W = 78
 
 def head(t): print("\n" + "=" * W); print(t.center(W)); print("=" * W)
 
-head("1. NAIVE vs CORRECTED SELECTION  (stitched OOS, 10 folds)")
+head("1. Naive vs Corrected Selection  (stitched Oos, 10 folds)")
 for tag in ("no_regime", "regime"):
     print(f"\n-- {tag} --")
     tbl = summary_table({m: b["net"] for m, b in d[tag]["curves"].items()})
     print(tbl.round(4).to_string(index=False))
 
-head("2. WHAT COSTS TAKE  (naive selection, no regime)")
+head("2. What Costs Take  (naive selection, no regime)")
 bk = d["no_regime"]["curves"]["naive"]
 cs = cost_sensitivity(bk["gross"], bk["turnover"])
 print(cs.round(4).to_string(index=False))
@@ -30,22 +30,22 @@ print(f"\nbreakeven cost: the net Sharpe is already negative at 0 bp"
 print(f"gross Sharpe {metrics(bk['gross'])['sharpe']:+.3f}  ->  net at 5 bp "
       f"{metrics(bk['net'])['sharpe']:+.3f}   (cost of {metrics(bk['gross'])['sharpe']-metrics(bk['net'])['sharpe']:.3f})")
 
-head("3. SIGNAL DECAY  (naive, no regime, by calendar year)")
+head("3. Signal Decay  (naive, no regime, by calendar year)")
 print(subperiod_metrics(bk["net"]).round(4).to_string(index=False))
 
-head("4. WHERE THE DRAWDOWN COMES FROM  (regime flags, naive selection)")
+head("4. Where The Drawdown Comes From  (regime flags, naive selection)")
 bkr = d["regime"]["curves"]["naive"]
 flagged = bkr["broken_share"] > 0.5
 att = drawdown_attribution(bkr["net"], flagged)
 for k, v in att.items():
     print(f"  {k:32s} {v: .4f}")
-print("\n  -- same book WITHOUT the regime exit, flags used only as a label --")
+print("\n , same book Without the regime exit, flags used only as a label --")
 common = bk.index.intersection(bkr.index)
 att2 = drawdown_attribution(bk["net"].loc[common], flagged.loc[common])
 for k, v in att2.items():
     print(f"  {k:32s} {v: .4f}")
 
-head("5. IS IT A DISGUISED DURATION BET?  (P&L vs 10y yield changes)")
+head("5. IS IT A Disguised Duration Bet?  (P&L vs 10y yield changes)")
 for tag in ("no_regime", "regime"):
     for m in ("naive", "bh"):
         if m not in d[tag]["curves"]:
@@ -55,7 +55,7 @@ for tag in ("no_regime", "regime"):
               f"R2={r['r2']:.4f}  n={r['n']}")
 print("\n  |t| < 2 means the P&L is not explained by rate moves.")
 
-head("6. REGIME EXIT: EFFECT SUMMARY")
+head("6. Regime Exit: Effect Summary")
 a = d["no_regime"]["table"].set_index("fold"); b = d["regime"]["table"].set_index("fold")
 for m in ("naive", "bh"):
     ca, cb = d["no_regime"]["curves"].get(m), d["regime"]["curves"].get(m)
