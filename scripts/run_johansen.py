@@ -15,7 +15,7 @@ close = pd.read_parquet(C.DATA_PROC / "prices_adj.parquet")
 dv    = pd.read_parquet(C.DATA_PROC / "dollar_volume.parquet")
 memb  = tradable_universe(pd.read_parquet(C.DATA_PROC / "membership_utilities.parquet"), close)
 lp, rets = np.log(close), close.pct_change()
-folds = walk_forward_folds(close.index, C.Start, C.End)
+folds = walk_forward_folds(close.index, C.START, C.END)
 
 Maxg, Size = 1200, 3
 null_rate = null_rejection_rate(n_series=Size, n_obs=750, n_sim=1500, seed=7)

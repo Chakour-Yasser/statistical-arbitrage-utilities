@@ -15,9 +15,9 @@ common=[c for c in close.columns if c in memb.columns]
 close,dv,memb = close[common],dv[common],memb[common]
 rets = close.pct_change(); dates = close.index
 rows=[]; q=None; q_cols=None
-Horizons = [1, 2, 3, 5, 10]      # cibles cumulees, une seule passe sur les donnees
-Hmax = max(Horizons)
-for i in range(253, len(dates)-Hmax-1):
+HORIZONS = [1, 2, 3, 5, 10]      # cibles cumulees, une seule passe sur les donnees
+HMAX = max(HORIZONS)
+for i in range(253, len(dates)-HMAX-1):
     t=dates[i]; snaps=memb.index[memb.index<=t]
     if not len(snaps): continue
     win=rets.iloc[i-251:i+1]; adv=dv.iloc[i-251:i+1].median()
@@ -42,19 +42,19 @@ for i in range(253, len(dates)-Hmax-1):
     #                    de trader chaque jour ; un horizon plus long achete de
     #                    la persistance en payant du pouvoir predictif.
     cumres=np.zeros(len(cols)); targets={}
-    for k in range(1, Hmax+1):
+    for k in range(1, HMAX+1):
         r_k=rets.iloc[i+k][cols].values
         f_k=np.nan_to_num(r_k,nan=0.0)@q
         cumres=cumres+(r_k-f_k@beta[1:])
-        if k in Horizons: targets[k]=cumres.copy()
+        if k in HORIZONS: targets[k]=cumres.copy()
     with np.errstate(invalid="ignore",divide="ignore"):
-        ys={f"y{k}": targets[k]/np.where(sd>0, sd*np.sqrt(k), np.nan) for k in Horizons}
+        ys={f"y{k}": targets[k]/np.where(sd>0, sd*np.sqrt(k), np.nan) for k in HORIZONS}
     y=ys["y1"]
-    ok=np.all([np.isfinite(ys[f"y{k}"]) for k in Horizons],axis=0)&np.isfinite(sc["s_score"])&np.isfinite(hl)&(hl>0)&(hl<=30)
+    ok=np.all([np.isfinite(ys[f"y{k}"]) for k in HORIZONS],axis=0)&np.isfinite(sc["s_score"])&np.isfinite(hl)&(hl>0)&(hl<=30)
     if ok.sum()<20: continue
     df=pd.DataFrame({k:v[ok] for k,v in feat.items()})
     df["symbol"]=np.array(cols)[ok]
-    for k in Horizons: df[f"y{k}"]=ys[f"y{k}"][ok]
+    for k in HORIZONS: df[f"y{k}"]=ys[f"y{k}"][ok]
     df["y"]=ys["y1"][ok]; df["date"]=t; df["sigma_step"]=sd[ok]
     df["disp"]=np.nanstd(sc["s_score"][ok])
     rows.append(df)

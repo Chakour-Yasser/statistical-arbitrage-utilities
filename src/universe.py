@@ -173,12 +173,12 @@ def normalize_ticker(t: str) -> str:
 # --------------------------------------------------------------------------- #
 # Building the membership matrix
 # --------------------------------------------------------------------------- #
-def snapshot_dates(start: str = C.Start, end: str = C.End,
+def snapshot_dates(start: str = C.START, end: str = C.END,
                    months: int = C.SNAPSHOT_FREQ_MONTHS) -> pd.DatetimeIndex:
     return pd.date_range(start=start, end=end, freq=f"{months}MS")
 
 
-def build_membership(sector: str | None = C.Sector, force: bool = False) -> pd.DataFrame:
+def build_membership(sector: str | None = C.SECTOR, force: bool = False) -> pd.DataFrame:
     """Boolean matrix (snapshot dates x tickers): True = member of the sector.
 
     Also writes a detailed snapshot log to data/processed/.

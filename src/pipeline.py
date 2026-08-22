@@ -95,7 +95,7 @@ def run_fold(fold: dict, close: pd.DataFrame, dollar_volume: pd.DataFrame,
 def run_walk_forward(close: pd.DataFrame, dollar_volume: pd.DataFrame,
                      memb: pd.DataFrame, use_regime: bool = True,
                      cost_bps: float = 5.0, alpha: float = 0.05) -> tuple:
-    folds = walk_forward_folds(close.index, C.Start, C.End)
+    folds = walk_forward_folds(close.index, C.START, C.END)
     rows, curves = [], {}
     for f in folds:
         r = run_fold(f, close, dollar_volume, memb, alpha=alpha,

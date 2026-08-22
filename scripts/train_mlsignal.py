@@ -11,12 +11,12 @@ panel = pd.read_parquet(C.DATA_PROC / "ml_panel.parquet")
 print(f"panel {len(panel):,} rows\n", flush=True)
 
 print("=== real ===", flush=True)
-real = walk_forward_predict(panel, first_test_year=2018, n_seeds=3, seed0=C.Seed % 1000)
+real = walk_forward_predict(panel, first_test_year=2018, n_seeds=3, seed0=C.SEED % 1000)
 real.to_parquet(C.DATA_PROC / "ml_pred_real.parquet")
 
 print("\n=== null (target permuted within each date) ===", flush=True)
 null = walk_forward_predict(panel, first_test_year=2018, n_seeds=3,
-                            permute_target=True, seed0=C.Seed % 1000)
+                            permute_target=True, seed0=C.SEED % 1000)
 null.to_parquet(C.DATA_PROC / "ml_pred_null.parquet")
 
 def ic(d, lab):

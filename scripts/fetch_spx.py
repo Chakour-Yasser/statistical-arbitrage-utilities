@@ -8,7 +8,7 @@ from src import config as C
 memb = pd.read_parquet(C.DATA_PROC / "membership_all.parquet")
 tickers = sorted(memb.columns[memb.any()])
 print(f"downloading {len(tickers)} tickers", flush=True)
-raw = yf.download(tickers, start=C.Start, end=C.End, auto_adjust=True,
+raw = yf.download(tickers, start=C.START, end=C.END, auto_adjust=True,
                   progress=False, threads=True, actions=False)
 close, vol = raw["Close"], raw["Volume"]
 close = close.dropna(axis=1, how="all")

@@ -22,7 +22,7 @@ import yfinance as yf
 from . import config as C
 
 
-def download_prices(tickers: list[str], start: str = C.Start, end: str = C.End,
+def download_prices(tickers: list[str], start: str = C.START, end: str = C.END,
                     force: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Returns (adjusted_close, dollar_volume), indexed by date, columns = tickers."""
     px_path = C.DATA_PROC / "prices_adj.parquet"

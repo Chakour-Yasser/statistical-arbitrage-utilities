@@ -9,7 +9,7 @@ from src.statarb import run_statarb
 from src.backtest import metrics
 from src.analysis import subperiod_metrics
 
-Ppy = 365          # perpetuals trade every day
+PPY = 365          # perpetuals trade every day
 close = pd.read_parquet(C.DATA_PROC / "crypto_close.parquet")
 vol   = pd.read_parquet(C.DATA_PROC / "crypto_dollar_volume.parquet")
 uni   = pd.read_parquet(C.DATA_PROC / "crypto_universe.parquet")
@@ -23,14 +23,14 @@ memb = build_membership(uni[uni.symbol.isin(keep)], close.index)
 print(f"universe: {close.shape[1]} symbols, {close.shape[0]} days, "
       f"{memb.sum(axis=1).min()}-{memb.sum(axis=1).max()} live per day\n", flush=True)
 
-Cfg = dict(no_trade_band=1.0, beta_step=1, risk_scale=True, n_factors=15,
-           min_adv=1e7, periods_per_year=Ppy)
-real = run_statarb(close, vol, memb, **Cfg)
-null = run_statarb(close, vol, memb, null_permute=True, seed=C.Seed, **Cfg)
-pickle.dump({"real": real, "null": null, "cfg": Cfg}, open(C.DATA_PROC/"crypto_statarb.pkl","wb"))
+CFG = dict(no_trade_band=1.0, beta_step=1, risk_scale=True, n_factors=15,
+           min_adv=1e7, periods_per_year=PPY)
+real = run_statarb(close, vol, memb, **CFG)
+null = run_statarb(close, vol, memb, null_permute=True, seed=C.SEED, **CFG)
+pickle.dump({"real": real, "null": null, "cfg": CFG}, open(C.DATA_PROC/"crypto_statarb.pkl","wb"))
 
-M = lambda x, t=None: metrics(x, t, periods_per_year=Ppy)
-tn = real.turnover.sum() / (len(real) / Ppy)
+M = lambda x, t=None: metrics(x, t, periods_per_year=PPY)
+tn = real.turnover.sum() / (len(real) / PPY)
 mg = M(real["gross"])
 print("="*68); print("CRYPTO Perpetuals, Cross-Sectional Stat Arb".center(68)); print("="*68)
 print(f"\n{real.n_names.mean():.0f} symbols/day | {real.n_pos.mean():.0f} positions/day | "
@@ -46,5 +46,5 @@ for b in (2, 5, 10, 15, 20):
 net = real["gross"] - real["turnover"]*10/1e4
 print("\nBY Year (net @ 10 bp)")
 r = subperiod_metrics(net)
-r["sharpe"] = r["sharpe"] * np.sqrt(Ppy/252); r["ann_return"] = r["ann_return"] * Ppy/252
+r["sharpe"] = r["sharpe"] * np.sqrt(PPY/252); r["ann_return"] = r["ann_return"] * PPY/252
 print(r.round(4).to_string(index=False))

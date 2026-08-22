@@ -37,7 +37,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 
-Features = ["s", "b", "hl", "r1", "r2", "r5", "r10", "r20",
+FEATURES = ["s", "b", "hl", "r1", "r2", "r5", "r10", "r20",
             "vol_ratio", "adv_rank", "drawdown", "disp"]
 
 
@@ -113,10 +113,10 @@ def walk_forward_predict(panel: pd.DataFrame, first_test_year: int = 2018,
             continue
         cut = tr["date"].quantile(1 - val_frac)
         tr_in, tr_va = tr[tr["date"] <= cut], tr[tr["date"] > cut]
-        mu_, sd_ = tr_in[Features].mean(), tr_in[Features].std().replace(0, 1)
+        mu_, sd_ = tr_in[FEATURES].mean(), tr_in[FEATURES].std().replace(0, 1)
 
         def prep(d):
-            return ((d[Features] - mu_) / sd_).to_numpy(dtype=np.float32)
+            return ((d[FEATURES] - mu_) / sd_).to_numpy(dtype=np.float32)
 
         xtr, ytr = prep(tr_in), tr_in["y"].to_numpy(dtype=np.float32)
         xva, yva = prep(tr_va), tr_va["y"].to_numpy(dtype=np.float32)

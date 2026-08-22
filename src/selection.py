@@ -78,7 +78,7 @@ def benjamini_yekutieli(pvals: np.ndarray, alpha: float = 0.05) -> np.ndarray:
     return benjamini_hochberg(pvals, alpha / h_n)
 
 
-Corrections = {
+CORRECTIONS = {
     "naive": lambda p, a: np.asarray(p) <= a,
     "bonferroni": bonferroni,
     "bh": benjamini_hochberg,
@@ -92,7 +92,7 @@ def n_discoveries(pvals: np.ndarray, alpha: float = 0.05) -> pd.Series:
     return pd.Series({
         "n_tests": len(p),
         "expected_under_null": alpha * len(p),
-        **{k: int(f(p, alpha).sum()) for k, f in Corrections.items()},
+        **{k: int(f(p, alpha).sum()) for k, f in CORRECTIONS.items()},
     })
 
 

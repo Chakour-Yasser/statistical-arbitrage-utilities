@@ -81,5 +81,5 @@ L.append("  history back to 2014: those are the predecessor's prices. Legitimate
 L.append("- The identity check rests on the overlap between quotation and membership. It would")
 L.append("  less reliably catch a ticker recycling occurring *during* the membership window, a")
 L.append("  case not observed here.")
-(C.Reports / "survivorship.md").write_text("\n".join(L), encoding="utf-8")
+(C.REPORTS / "survivorship.md").write_text("\n".join(L), encoding="utf-8")
 print("written -> reports/survivorship.md")

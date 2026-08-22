@@ -15,10 +15,10 @@ memb = tradable_universe(pd.read_parquet(C.DATA_PROC/"membership_all.parquet"), 
 common = [c for c in close.columns if c in memb.columns]
 close, dv, memb = close[common], dv[common], memb[common]
 
-Cfg = dict(no_trade_band=1.0, beta_step=1)
-real = run_statarb(close, dv, memb, **Cfg)
-null = run_statarb(close, dv, memb, null_permute=True, seed=C.Seed, **Cfg)
-pickle.dump({"real": real, "null": null, "cfg": Cfg}, open(C.DATA_PROC/"statarb_final.pkl","wb"))
+CFG = dict(no_trade_band=1.0, beta_step=1)
+real = run_statarb(close, dv, memb, **CFG)
+null = run_statarb(close, dv, memb, null_permute=True, seed=C.SEED, **CFG)
+pickle.dump({"real": real, "null": null, "cfg": CFG}, open(C.DATA_PROC/"statarb_final.pkl","wb"))
 
 tn = real.turnover.sum()/(len(real)/252)
 mg = metrics(real["gross"])
