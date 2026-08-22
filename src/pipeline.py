@@ -16,7 +16,7 @@ from .backtest import metrics, pair_pnl, pair_positions
 from .cointegration import (PairResult, calibrate_zscore, passes_quality,
                             screen_pairs, spread_from_beta, zscore_frozen)
 from .regime import regime_flags
-from .selection import Corrections, liquidity_filter, walk_forward_folds
+from .selection import CORRECTIONS, liquidity_filter, walk_forward_folds
 
 _COLS = ("a", "b", "pvalue", "beta", "alpha", "half_life", "n_obs", "resid_std")
 
@@ -54,7 +54,7 @@ def run_fold(fold: dict, close: pd.DataFrame, dollar_volume: pd.DataFrame,
 
     out = {"fold": fold["fold"], "n_tests": len(scan), "n_tickers": len(tickers)}
     for method in methods:
-        keep = Corrections[method](scan["pvalue"].values, alpha) & scan["quality"].values
+        keep = CORRECTIONS[method](scan["pvalue"].values, alpha) & scan["quality"].values
         sel = scan[keep]
         out[f"n_{method}"] = int(len(sel))
         if sel.empty:
